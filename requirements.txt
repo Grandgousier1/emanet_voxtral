@@ -1,0 +1,18 @@
+yt-dlp>=2025.7.1
+ffmpeg-python>=0.2.0
+tqdm>=4.65.0
+rich>=13.0.0
+faster-whisper>=0.8.0
+torch==2.0.1
+torchaudio
+transformers>=4.35.0
+sentencepiece>=0.1.98
+silero-vad @ git+https://github.com/snakers4/silero-vad.git@master
+python-dotenv>=1.0.0
+sqlalchemy>=1.4.0
+requests>=2.28.0
+soundfile
+sacremoses
+sacrebleu
+nltk
+soundfile

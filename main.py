@@ -104,17 +104,16 @@ def vad_segments(audio_path: Path, sr=SAMPLE_RATE, min_s: float = 0.3) -> List[D
         waveform = torchaudio.transforms.Resample(orig_sr, sr)(waveform)
     arr = waveform.mean(dim=0).cpu().numpy()
     try:
-        if True:
-            from silero_vad import get_speech_timestamps
-            timestamps = get_speech_timestamps(arr, sampling_rate=sr)
-            segs = []
-            for t in timestamps:
-                s = t.get('start', 0); e = t.get('end', 0)
-                if s > 1000:
-                    s /= 1000.0; e /= 1000.0
-                if (e - s) >= min_s:
-                    segs.append({'start': float(s), 'end': float(e)})
-            return segs
+        from silero_vad import get_speech_timestamps
+        timestamps = get_speech_timestamps(arr, sampling_rate=sr)
+        segs = []
+        for t in timestamps:
+            s = t.get('start', 0); e = t.get('end', 0)
+            if s > 1000:
+                s /= 1000.0; e /= 1000.0
+            if (e - s) >= min_s:
+                segs.append({'start': float(s), 'end': float(e)})
+        return segs
     except Exception:
         # fallback energy-based
         frame_ms = 30
@@ -148,8 +147,12 @@ def try_load_voxtral(model_name: str):
         proc = AutoProcessor.from_pretrained(model_name)
         model = AutoModelForSpeechSeq2Seq.from_pretrained(model_name, torch_dtype=torch.float16, device_map='auto')
         return proc, model
+    except (ImportError, OSError) as e:
+        console.log(f'[red]Voxtral load failed for {model_name} due to a file or import error: {e}[/red]')
+        return None, None
     except Exception as e:
-        console.log(f'[yellow]Voxtral load failed for {model_name}: {e}[/yellow]')
+        # Catch other potential errors like out-of-memory
+        console.log(f'[yellow]An unexpected error occurred loading model {model_name}: {type(e).__name__} - {e}[/yellow]')
         return None, None
 
 def asr_with_voxtral(audio_wav: Path, segments: List[Dict[str, Any]], prefer_small: bool = True):
@@ -160,14 +163,35 @@ def asr_with_voxtral(audio_wav: Path, segments: List[Dict[str, Any]], prefer_sma
             console.log(f'[green]Using Voxtral model {model_id}[/green]')
             out = []
             import soundfile as sf
+
+            # Load the entire audio file once, assuming it's already at the correct sample rate from download_audio
+            try:
+                main_audio_arr, sr = sf.read(str(audio_wav), dtype='float32')
+                if sr != SAMPLE_RATE:
+                    console.log(f"[yellow]Warning: audio sample rate is {sr}, but processing at {SAMPLE_RATE}. This might affect quality.[/yellow]")
+            except Exception as e:
+                console.log(f"[red]Fatal: Failed to read audio file {audio_wav}: {e}[/red]")
+                # If we can't read the audio, we can't proceed with this model. Try next model.
+                continue
+
             for idx, s in enumerate(segments, start=1):
-                tmp = audio_wav.parent / f'vox_seg_{idx:04d}.wav'
-                dur = s['end'] - s['start']
-                subprocess.run(['ffmpeg','-y','-i',str(audio_wav),'-ss',str(s['start']),'-t',str(dur),'-ar',str(SAMPLE_RATE),'-ac',str(CHANNELS),str(tmp)], check=True)
-                arr, sr = sf.read(str(tmp))
-                inputs = proc(arr, sampling_rate=sr, return_tensors='pt')
+                # Calculate start and end samples for slicing from the main audio array
+                start_sample = int(s['start'] * SAMPLE_RATE)
+                end_sample = int(s['end'] * SAMPLE_RATE)
+
+                # Slice the audio array directly in memory - much faster than ffmpeg subprocess
+                segment_arr = main_audio_arr[start_sample:end_sample]
+
+                if segment_arr.size == 0:
+                    console.log(f"[yellow]Skipping empty audio segment {idx}[/yellow]")
+                    continue
+
+                inputs = proc(segment_arr, sampling_rate=SAMPLE_RATE, return_tensors='pt')
                 inputs = {k: v.to(model.device) for k, v in inputs.items()}
                 with torch.no_grad():
                     gen = model.generate(**inputs)
                 try:
-                    decoded = proc.batch_decode(gen, skip_sp
+                    decoded = proc.batch_decode(gen, skip_special_tokens=True)
+                except Exception as e:
+                    console.log(f"[yellow]Error decoding ASR segment: {e}[/yellow]")
+                    out.append({'text': '[decoding error]', 'start': s['start'], 'end': s['end']})

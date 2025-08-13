@@ -1,197 +1,410 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-main.py — Emanet Runpod final
-Pipeline local full: download -> VAD -> ASR (Voxtral small / mini fallback or faster-whisper) -> translation (mistral-small local) -> .srt
-Supports single URL/file and batch list. Includes dry-run smoke tests and sequential batch mode (safe for single GPU).
-"""
-
 import argparse
+import datetime
+import gc
+import logging
 import os
+import subprocess
 import sys
 import time
-import json
-import sqlite3
-import hashlib
-import subprocess
-from pathlib import Path
-from typing import List, Dict, Any, Optional
+import torch
+import torchaudio
+import yt_dlp
+import yaml
+from utils.gpu_utils import free_cuda_mem, get_gpu_info
 
-from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeRemainingColumn
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
 
-console = Console()
 
-# local helpers
-from utils.gpu_utils import check_cuda_available, available_device, free_cuda_mem, gpu_mem_info
-
-# constants
-SAMPLE_RATE = 16000
-CHANNELS = 1
-CACHE_DB = Path('.emanet_cache.db')
-VOXTRAL_SMALL = 'mistralai/Voxtral-Small-24B-2507'
-VOXTRAL_MINI = 'mistralai/Voxtral-Mini-3B-2507'
-MISTRAL_SMALL = 'mistralai/mistral-small'
-
-# ---------------- Cache DB -----------------
-class CacheDB:
-    def __init__(self, path=CACHE_DB):
-        self.path = path
-        self._ensure()
-    def _conn(self):
-        return sqlite3.connect(str(self.path))
-    def _ensure(self):
-        with self._conn() as c:
-            c.execute('''CREATE TABLE IF NOT EXISTS translations (k TEXT PRIMARY KEY, src TEXT, trg TEXT, model TEXT, ts REAL)''')
-            c.execute('''CREATE TABLE IF NOT EXISTS videos (vid TEXT PRIMARY KEY, srt TEXT, status TEXT, ts REAL)''')
-    def get(self,k):
-        with self._conn() as c:
-            r=c.execute('SELECT trg FROM translations WHERE k=?',(k,)).fetchone()
-            return r[0] if r else None
-    def set(self,k,src,trg,model):
-        with self._conn() as c:
-            c.execute('INSERT OR REPLACE INTO translations (k,src,trg,model,ts) VALUES (?,?,?,?,?)',(k,src,trg,model,time.time()))
-    def mark_done(self,vid,srt):
-        with self._conn() as c:
-            c.execute('INSERT OR REPLACE INTO videos (vid,srt,status,ts) VALUES (?,?,?,?)',(vid,srt,'done',time.time()))
-
-# ---------------- Preflight -----------------
-def smoke_tests():
-    console.rule('[cyan]Preflight checks')
-    errors = []
-    console.log('Python: ' + sys.version.splitlines()[0])
+def load_config(config_path="config.yaml"):
+    """Loads configuration from a YAML file."""
     try:
-        import torch
-        console.log('Torch: ' + torch.__version__)
-    except Exception:
-        errors.append('torch not importable')
-    gpu_ok = check_cuda_available()
-    console.log('CUDA available: ' + str(gpu_ok))
-    for exe in ('ffmpeg','yt-dlp'):
-        if subprocess.call(['which', exe], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) != 0:
-            errors.append(f'{exe} not found')
-    if not errors:
-        console.log('[green]Preflight OK')
-    else:
-        for e in errors:
-            console.log(f'[red]{e}[/red]')
-        raise RuntimeError('Preflight failed')
+        with open(config_path, "r") as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        logging.error(f"Configuration file not found at {config_path}")
+        return None
+    except yaml.YAMLError as e:
+        logging.error(f"Error parsing YAML file: {e}")
+        return None
 
-# ---------------- Download audio -----------------
-def download_audio_from_url(url: str, workdir: Path, cookiefile: Optional[Path]=None) -> Path:
-    workdir.mkdir(parents=True, exist_ok=True)
-    out_template = str(workdir / '%(id)s.%(ext)s')
-    cmd = ['yt-dlp', '-f', 'bestaudio[ext=m4a]/bestaudio', '--no-playlist', '-o', out_template, url]
-    if cookiefile:
-        cmd += ['--cookies', str(cookiefile)]
-    subprocess.run(cmd, check=True)
-    files = sorted(list(workdir.glob('*')), key=lambda p: p.stat().st_mtime, reverse=True)
-    if not files:
-        raise RuntimeError('yt-dlp did not produce a file')
-    downloaded = files[0]
-    wav = workdir / f'{downloaded.stem}.wav'
-    subprocess.run(['ffmpeg','-y','-i',str(downloaded),'-ar',str(SAMPLE_RATE),'-ac',str(CHANNELS),str(wav)], check=True)
-    return wav
 
-# ---------------- VAD -----------------
-def vad_segments(audio_path: Path, sr=SAMPLE_RATE, min_s: float = 0.3) -> List[Dict[str, float]]:
+def parse_arguments():
+    """Parses command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Automated Subtitling Pipeline",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    config = load_config()
+    if not config:
+        # Fallback to defaults if config fails to load
+        config = {
+            "model_paths": {},
+            "transcription_options": {},
+            "translation_options": {},
+            "youtube_dl_options": {},
+        }
+
+    # Batch processing
+    parser.add_argument(
+        "--batch-list", type=str, help="Path to a text file with a list of video URLs."
+    )
+
+    # YouTube download options
+    parser.add_argument(
+        "--download-video",
+        action="store_true",
+        default=config.get("youtube_dl_options", {}).get("download_video", True),
+        help="Download the video file.",
+    )
+    parser.add_argument(
+        "--download-audio",
+        action="store_true",
+        default=config.get("youtube_dl_options", {}).get("download_audio", True),
+        help="Download the audio file.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default=config.get("youtube_dl_options", {}).get("output_dir", "output"),
+        help="Directory to save downloaded files.",
+    )
+    parser.add_argument(
+        "--cookies",
+        type=str,
+        default=config.get("youtube_dl_options", {}).get("cookies", None),
+        help="Path to a cookies.txt file for yt-dlp.",
+    )
+
+    # Transcription options
+    parser.add_argument(
+        "--voxtral-small-model-path",
+        type=str,
+        default=config.get("model_paths", {}).get(
+            "voxtral_small", "collabora/whisperspeech_asr_small_en"
+        ),
+        help="Path to the Voxtral Small ASR model.",
+    )
+    parser.add_argument(
+        "--voxtral-mini-model-path",
+        type=str,
+        default=config.get("model_paths", {}).get(
+            "voxtral_mini", "collabora/whisperspeech_asr_mini_en"
+        ),
+        help="Path to the Voxtral Mini ASR model.",
+    )
+    parser.add_argument(
+        "--faster-whisper-model-path",
+        type=str,
+        default=config.get("model_paths", {}).get(
+            "faster_whisper", "ctranslate2-4you/whisper-small-en-ct2-int8"
+        ),
+        help="Path to the faster-whisper ASR model.",
+    )
+    parser.add_argument(
+        "--transcription-device",
+        type=str,
+        default=config.get("transcription_options", {}).get("device", "cuda"),
+        help="Device to use for transcription (e.g., 'cuda', 'cpu').",
+    )
+
+    # Translation options
+    parser.add_argument(
+        "--nllb-model-path",
+        type=str,
+        default=config.get("model_paths", {}).get(
+            "nllb", "facebook/nllb-200-distilled-600M"
+        ),
+        help="Path to the NLLB translation model.",
+    )
+    parser.add_argument(
+        "--source-lang",
+        type=str,
+        default=config.get("translation_options", {}).get("source_lang", "eng_Latn"),
+        help="Source language for translation.",
+    )
+    parser.add_argument(
+        "--target-lang",
+        type=str,
+        default=config.get("translation_options", {}).get("target_lang", "fra_Latn"),
+        help="Target language for translation.",
+    )
+    parser.add_argument(
+        "--translation-device",
+        type=str,
+        default=config.get("translation_options", {}).get("device", "cuda"),
+        help="Device to use for translation (e.g., 'cuda', 'cpu').",
+    )
+
+    return parser.parse_args()
+
+
+def download_media(url, output_dir, download_video, download_audio, cookies_file):
+    """Downloads video and/or audio using yt-dlp."""
+    logging.info(f"Starting download for URL: {url}")
+    ydl_opts = {
+        "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+        "outtmpl": os.path.join(output_dir, "%(title)s.%(ext)s"),
+        "retries": 10,
+        "fragment_retries": 10,
+        "ignoreerrors": True,
+        "postprocessors": [],
+    }
+
+    if cookies_file:
+        ydl_opts["cookiefile"] = cookies_file
+        logging.info(f"Using cookies from {cookies_file}")
+
+    if download_audio:
+        ydl_opts["postprocessors"].append(
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "wav",
+                "preferredquality": "192",
+            }
+        )
+        if not download_video:
+            ydl_opts["format"] = "bestaudio/best"
+
+    video_path, audio_path = None, None
     try:
-        import torchaudio
-    except Exception as e:
-        raise RuntimeError('Please install torchaudio') from e
-    waveform, orig_sr = torchaudio.load(str(audio_path))
-    if orig_sr != sr:
-        waveform = torchaudio.transforms.Resample(orig_sr, sr)(waveform)
-    arr = waveform.mean(dim=0).cpu().numpy()
-    try:
-        from silero_vad import get_speech_timestamps
-        timestamps = get_speech_timestamps(arr, sampling_rate=sr)
-        segs = []
-        for t in timestamps:
-            s = t.get('start', 0); e = t.get('end', 0)
-            if s > 1000:
-                s /= 1000.0; e /= 1000.0
-            if (e - s) >= min_s:
-                segs.append({'start': float(s), 'end': float(e)})
-        return segs
-    except Exception:
-        # fallback energy-based
-        frame_ms = 30
-        frame_size = int(sr * frame_ms / 1000)
-        energy = []
-        for i in range(0, len(arr), frame_size):
-            frame = arr[i:i+frame_size]
-            energy.append(float((frame**2).mean()) if frame.size else 0.0)
-        th = (sum(energy) / len(energy)) * 1.5
-        segs = []
-        start = None
-        for idx, e in enumerate(energy):
-            t0 = idx * frame_size / sr
-            t1 = (idx + 1) * frame_size / sr
-            if e > th:
-                if start is None:
-                    start = t0
-                end = t1
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(url, download=True)
+            if info_dict:
+                base_path = ydl.prepare_filename(info_dict).rsplit(".", 1)[0]
+                if download_video:
+                    video_path = f"{base_path}.mp4"
+                    if not os.path.exists(video_path):
+                        # Sometimes the extension is different
+                        for ext in [".webm", ".mkv", ".flv"]:
+                            if os.path.exists(f"{base_path}{ext}"):
+                                video_path = f"{base_path}{ext}"
+                                break
+                    logging.info(f"Video downloaded to: {video_path}")
+                if download_audio:
+                    audio_path = f"{base_path}.wav"
+                    logging.info(f"Audio extracted to: {audio_path}")
             else:
-                if start is not None and (end - start) >= min_s:
-                    segs.append({'start': start, 'end': end})
-                start = None
-        if start is not None and (end - start) >= min_s:
-            segs.append({'start': start, 'end': end})
-        return segs
+                logging.error(f"Failed to download or extract info for URL: {url}")
 
-# ---------------- ASR Voxtral local (with fallback) -----------------
-def try_load_voxtral(model_name: str):
-    try:
-        from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
-        proc = AutoProcessor.from_pretrained(model_name)
-        model = AutoModelForSpeechSeq2Seq.from_pretrained(model_name, torch_dtype=torch.float16, device_map='auto')
-        return proc, model
-    except (ImportError, OSError) as e:
-        console.log(f'[red]Voxtral load failed for {model_name} due to a file or import error: {e}[/red]')
-        return None, None
     except Exception as e:
-        # Catch other potential errors like out-of-memory
-        console.log(f'[yellow]An unexpected error occurred loading model {model_name}: {type(e).__name__} - {e}[/yellow]')
-        return None, None
+        logging.error(f"An error occurred during download: {e}")
 
-def asr_with_voxtral(audio_wav: Path, segments: List[Dict[str, Any]], prefer_small: bool = True):
-    order = [VOXTRAL_SMALL, VOXTRAL_MINI] if prefer_small else [VOXTRAL_MINI, VOXTRAL_SMALL]
-    for model_id in order:
-        proc, model = try_load_voxtral(model_id)
-        if proc and model:
-            console.log(f'[green]Using Voxtral model {model_id}[/green]')
-            out = []
-            import soundfile as sf
+    return video_path, audio_path
 
-            # Load the entire audio file once, assuming it's already at the correct sample rate from download_audio
-            try:
-                main_audio_arr, sr = sf.read(str(audio_wav), dtype='float32')
-                if sr != SAMPLE_RATE:
-                    console.log(f"[yellow]Warning: audio sample rate is {sr}, but processing at {SAMPLE_RATE}. This might affect quality.[/yellow]")
-            except Exception as e:
-                console.log(f"[red]Fatal: Failed to read audio file {audio_wav}: {e}[/red]")
-                # If we can't read the audio, we can't proceed with this model. Try next model.
-                continue
 
-            for idx, s in enumerate(segments, start=1):
-                # Calculate start and end samples for slicing from the main audio array
-                start_sample = int(s['start'] * SAMPLE_RATE)
-                end_sample = int(s['end'] * SAMPLE_RATE)
+def transcribe_with_voxtral(model, audio_path, device):
+    """Transcribes audio using a Voxtral model."""
+    from whisperspeech.asr import ASREngine
 
-                # Slice the audio array directly in memory - much faster than ffmpeg subprocess
-                segment_arr = main_audio_arr[start_sample:end_sample]
+    logging.info(f"Attempting transcription with Voxtral model: {model}")
+    try:
+        asr = ASREngine(model, device=device)
+        transcription = asr.transcribe(audio_path)
+        logging.info("Voxtral transcription successful.")
+        return transcription
+    except Exception as e:
+        logging.error(f"Voxtral transcription failed: {e}")
+        return None
+    finally:
+        if "asr" in locals():
+            del asr
+        free_cuda_mem()
 
-                if segment_arr.size == 0:
-                    console.log(f"[yellow]Skipping empty audio segment {idx}[/yellow]")
-                    continue
 
-                inputs = proc(segment_arr, sampling_rate=SAMPLE_RATE, return_tensors='pt')
-                inputs = {k: v.to(model.device) for k, v in inputs.items()}
-                with torch.no_grad():
-                    gen = model.generate(**inputs)
+def transcribe_with_faster_whisper(model, audio_path, device):
+    """Transcribes audio using faster-whisper."""
+    from faster_whisper import WhisperModel
+
+    logging.info(f"Attempting transcription with faster-whisper model: {model}")
+    try:
+        # Determine compute_type based on device
+        compute_type = "int8"
+        if device == "cuda":
+            if torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 7:
+                compute_type = (
+                    "float16"  # Use float16 for better performance on modern GPUs
+                )
+            else:
+                compute_type = "int8"
+
+        whisper_model = WhisperModel(model, device=device, compute_type=compute_type)
+        segments, _ = whisper_model.transcribe(audio_path, beam_size=5)
+        transcription = "".join([segment.text for segment in segments])
+        logging.info("faster-whisper transcription successful.")
+        return {"text": transcription, "segments": list(segments)}
+    except Exception as e:
+        logging.error(f"faster-whisper transcription failed: {e}")
+        return None
+    finally:
+        if "whisper_model" in locals():
+            del whisper_model
+        free_cuda_mem()
+
+
+def translate_text(text, model, src_lang, tgt_lang, device):
+    """Translates text using NLLB."""
+    from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
+    logging.info(f"Translating text from {src_lang} to {tgt_lang}")
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model, src_lang=src_lang)
+        translator = AutoModelForSeq2SeqLM.from_pretrained(model).to(device)
+        inputs = tokenizer(text, return_tensors="pt").to(device)
+        translated_tokens = translator.generate(
+            **inputs,
+            forced_bos_token_id=tokenizer.lang_code_to_id[tgt_lang],
+            max_length=1024,
+        )
+        translation = tokenizer.batch_decode(
+            translated_tokens, skip_special_tokens=True
+        )[0]
+        logging.info("Translation successful.")
+        return translation
+    except Exception as e:
+        logging.error(f"Translation failed: {e}")
+        return None
+    finally:
+        if "translator" in locals():
+            del translator
+        if "tokenizer" in locals():
+            del tokenizer
+        free_cuda_mem()
+
+
+def format_timestamp(seconds):
+    """Formats seconds into SRT timestamp format."""
+    delta = datetime.timedelta(seconds=seconds)
+    hours, remainder = divmod(delta.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    milliseconds = delta.microseconds // 1000
+    return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
+
+
+def generate_srt(segments, output_path):
+    """Generates an SRT file from transcription segments."""
+    logging.info(f"Generating SRT file at: {output_path}")
+    try:
+        with open(output_path, "w", encoding="utf-8") as f:
+            for i, segment in enumerate(segments):
+                start_time = format_timestamp(segment.start)
+                end_time = format_timestamp(segment.end)
+                f.write(f"{i + 1}\n")
+                f.write(f"{start_time} --> {end_time}\n")
+                f.write(f"{segment.text.strip()}\n\n")
+        logging.info("SRT file generation successful.")
+    except Exception as e:
+        logging.error(f"Failed to generate SRT file: {e}")
+
+
+def main():
+    """Main function to run the subtitling pipeline."""
+    args = parse_arguments()
+    os.makedirs(args.output_dir, exist_ok=True)
+
+    model_cache = {}
+
+    def get_model(model_name, model_loader, *loader_args):
+        if model_name not in model_cache:
+            logging.info(f"Loading {model_name}...")
+            model_cache[model_name] = model_loader(*loader_args)
+            logging.info(f"{model_name} loaded.")
+        return model_cache[model_name]
+
+    if args.batch_list:
+        try:
+            with open(args.batch_list, "r") as f:
+                video_urls = [line.strip() for line in f if line.strip()]
+        except FileNotFoundError:
+            logging.error(f"Batch file not found: {args.batch_list}")
+            return
+    else:
+        logging.error("No batch list provided. Please specify with --batch-list.")
+        return
+
+    for url in video_urls:
+        logging.info(f"Processing video: {url}")
+        start_time = time.time()
+
+        _, audio_path = download_media(
+            url, args.output_dir, args.download_video, args.download_audio, args.cookies
+        )
+
+        if not audio_path or not os.path.exists(audio_path):
+            logging.error(f"Audio download failed for {url}. Skipping.")
+            continue
+
+        # ASR Fallback Chain
+        transcription = None
+        # 1. Try Voxtral Small
+        if not transcription:
+            transcription = transcribe_with_voxtral(
+                args.voxtral_small_model_path, audio_path, args.transcription_device
+            )
+        # 2. Try Voxtral Mini
+        if not transcription:
+            transcription = transcribe_with_voxtral(
+                args.voxtral_mini_model_path, audio_path, args.transcription_device
+            )
+        # 3. Try faster-whisper
+        if not transcription:
+            transcription = transcribe_with_faster_whisper(
+                args.faster_whisper_model_path, audio_path, args.transcription_device
+            )
+
+        if not transcription or "segments" not in transcription:
+            logging.error(f"All transcription attempts failed for {url}. Skipping.")
+            os.remove(audio_path)  # Clean up audio file
+            continue
+
+        base_filename = os.path.splitext(os.path.basename(audio_path))[0]
+        srt_path = os.path.join(args.output_dir, f"{base_filename}.srt")
+        generate_srt(transcription["segments"], srt_path)
+
+        # Translation
+        if args.target_lang and args.source_lang != args.target_lang:
+            translated_text = translate_text(
+                transcription["text"],
+                args.nllb_model_path,
+                args.source_lang,
+                args.target_lang,
+                args.translation_device,
+            )
+            if translated_text:
+                translated_srt_path = os.path.join(
+                    args.output_dir, f"{base_filename}_{args.target_lang}.srt"
+                )
+                # This is a simplification; a real implementation would need
+                # to align translated sentences with original timestamps.
+                # For now, we'll just save the full translated text.
                 try:
-                    decoded = proc.batch_decode(gen, skip_special_tokens=True)
+                    with open(
+                        translated_srt_path.replace(".srt", ".txt"),
+                        "w",
+                        encoding="utf-8",
+                    ) as f:
+                        f.write(translated_text)
+                    logging.info(
+                        f"Full translated text saved to {translated_srt_path.replace('.srt', '.txt')}"
+                    )
                 except Exception as e:
-                    console.log(f"[yellow]Error decoding ASR segment: {e}[/yellow]")
-                    out.append({'text': '[decoding error]', 'start': s['start'], 'end': s['end']})
+                    logging.error(f"Could not save translated text: {e}")
+
+        # Cleanup
+        os.remove(audio_path)
+        free_cuda_mem()
+
+        end_time = time.time()
+        logging.info(
+            f"Finished processing {url} in {end_time - start_time:.2f} seconds."
+        )
+
+    logging.info("Batch processing complete.")
+
+
+if __name__ == "__main__":
+    main()

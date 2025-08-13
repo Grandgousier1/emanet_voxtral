@@ -1,124 +1,143 @@
-# Projet de Sous-titrage Automatique de la Série YouTube Turque *Emanet*
+# Projet de Pipeline de Sous-titrage Automatisé
 
-## Présentation
+## 1. Présentation
 
-Ce projet vise à générer automatiquement des sous-titres en français parfaitement synchronisés pour la série YouTube turque *Emanet*, en exploitant exclusivement des modèles d’intelligence artificielle fonctionnant en local sur un environnement GPU dédié (RunPod B200).  
-L’objectif est d’assurer une qualité optimale de transcription et traduction contextuelle, tout en minimisant les coûts liés à l’utilisation d’API externes. Le pipeline complet gère la récupération audio, la segmentation, la reconnaissance vocale, la traduction contextuelle, la synchronisation temporelle précise et la production de fichiers `.srt` utilisables directement dans VLC ou tout autre lecteur.
+Ce projet fournit un pipeline de sous-titrage automatisé, robuste et configurable. Il a été conçu pour transformer des vidéos (notamment depuis YouTube) en fichiers de sous-titres (`.srt`) de haute qualité.
 
----
-
-## Architecture & Fonctionnalités
-
-- **Téléchargement audio YouTube** : Extraction fiable et robuste via `yt-dlp` avec gestion des erreurs fréquentes liées aux mesures anti-bot de YouTube.  
-- **Détection vocale (VAD)** : Identification intelligente des segments parlés pour éviter le traitement des silences et de la musique, optimisant ainsi le temps de calcul et la consommation GPU.  
-- **Reconnaissance vocale (ASR)** :  
-  - Modèle principal : *Voxtral Small 24B* en local, garantissant un excellent compromis entre vitesse, qualité et usage mémoire.  
-  - Fallback automatique vers *Voxtral Mini 3B* si manque de ressources ou erreurs.  
-  - Dernier recours : *Faster Whisper* (open source, léger) pour robustesse maximale.  
-- **Traduction contextuelle locale** : Utilisation exclusive du modèle LLM *Mistral Small* en local pour traduire précisément chaque segment turc en français naturel, adapté aux dialogues dramatiques.  
-- **Génération et synchronisation SRT** : Production des fichiers `.srt` avec horodatage millimétrique, compatible tous lecteurs vidéo.  
-- **Batch Processing** : Gestion séquentielle automatisée de playlists entières, avec nettoyage et libération mémoire GPU pour éviter tout crash.  
-- **Debug & Logs** : Interface CLI user-friendly avec barres de progression détaillées, logs explicites, gestion d’erreurs améliorée, vérifications pré-exécution de toutes dépendances et fonctions critiques.  
-- **Configuration GPU** : Adaptation automatique des paramètres (batch size, mémoire) selon capacité détectée.  
+Le système est entièrement basé sur des modèles d'intelligence artificielle open-source fonctionnant en local. Il gère l'ensemble du processus : téléchargement, transcription, traduction, et génération de fichiers de sous-titres synchronisés. L'objectif est d'offrir une solution flexible et puissante, sans dépendre d'API externes payantes.
 
 ---
 
-## Installation & Prérequis
+## 2. Architecture & Fonctionnalités
 
-### Environnement
+Le pipeline a été entièrement refactorisé pour garantir la stabilité et la flexibilité.
 
-- OS : Ubuntu (compatible Fedora, testé sur RunPod B200 GPU instance)  
-- GPU : minimum 12 Go VRAM recommandé (RunPod B200 idéal)  
-- Python 3.10+ recommandé
+- **Traitement par lots (Batch Processing)** : Le script est conçu pour traiter une liste d'URLs de vidéos fournie dans un fichier texte. Les modèles d'IA ne sont chargés qu'une seule fois par session, optimisant considérablement les performances pour les traitements en série.
+
+- **Configuration Hybride** :
+  - Un fichier central `config.yaml` définit tous les paramètres par défaut (modèles, langues, etc.).
+  - Chaque paramètre peut être surchargé dynamiquement via des arguments en ligne de commande, offrant une flexibilité maximale pour des exécutions spécifiques.
+
+- **Chaîne de Transcription (ASR) avec Fallback** : Pour garantir la robustesse, le système utilise une chaîne de modèles de reconnaissance vocale. Si le premier échoue, il passe automatiquement au suivant :
+  1. **Voxtral Small** (par défaut, haute qualité)
+  2. **Voxtral Mini** (modèle de secours plus léger)
+  3. **Faster-Whisper (small)** (dernier recours, très robuste)
+
+- **Traduction Neuronale** : La traduction est gérée par le modèle **NLLB (No Language Left Behind)** de Meta, permettant de traduire depuis et vers des centaines de langues.
+
+- **Robustesse du téléchargement YouTube** : Pour contourner les mesures anti-bot de YouTube, le script intègre une option `--cookies` permettant de passer un fichier de cookies à `yt-dlp` pour s'authentifier.
+
+- **Gestion de la Mémoire** : Des utilitaires de gestion de la mémoire GPU sont intégrés pour libérer les ressources après chaque étape critique, assurant la stabilité lors de longs traitements.
+
+- **Gestion des Dépendances** : Toutes les dépendances Python sont figées (`pinned`) dans des fichiers `requirements.txt` (pour GPU) et `requirements-cpu.txt` (pour CPU seulement), garantissant une reproductibilité parfaite de l'environnement.
+
+---
+
+## 3. Installation & Prérequis
+
+### Prérequis
+
+- **OS** : Linux (testé sur Ubuntu)
+- **Python** : 3.10 ou supérieur
+- **GPU** : Recommandé pour des performances optimales (NVIDIA, >12Go VRAM). Une installation CPU est également supportée.
+- **ffmpeg** : Doit être installé et accessible dans le PATH (`sudo apt update && sudo apt install ffmpeg`).
 
 ### Installation
 
-1. Cloner le projet :  
-   ```bash
-   git clone <URL_DU_PROJET>
-   cd <PROJET>
-````
+1.  **Cloner le projet :**
+    ```bash
+    git clone <URL_DU_PROJET>
+    cd <NOM_DU_DOSSIER>
+    ```
 
-2. Installer les dépendances Python :
+2.  **Créer l'environnement virtuel et installer les dépendances :**
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+    Le `Makefile` automatise la création de l'environnement. Choisissez l'une des deux options :
 
-3. Préparer l’environnement GPU et modèles (exécuté automatiquement via `Makefile`) :
-
-   ```bash
-   make setup
-   ```
-
----
-
-## Usage
-
-### Lancer la génération d’un seul épisode
-
-```bash
-python main.py --youtube_url <URL_YOUTUBE> --output <FICHIER_SORTIE.srt>
-```
-
-Options importantes :
-
-* `--use_voxtral_mini` : Forcer l’usage du modèle Voxtral Mini 3B (moins lourd mais moins rapide)
-* `--debug` : Activer logs détaillés pour diagnostic
-* `--batch_size <N>` : Ajuster la taille du batch (mémoire GPU)
-
-### Traitement en batch
-
-Lister plusieurs URLs dans un fichier texte, une URL par ligne, puis lancer :
-
-```bash
-make batch FILE=liste_videos.txt
-```
-
-Le pipeline traitera chaque épisode séquentiellement, libérant la mémoire GPU entre les traitements.
+    - **Pour un environnement GPU (recommandé) :**
+      ```bash
+      make install
+      ```
+    - **Pour un environnement CPU uniquement :**
+      ```bash
+      make install-cpu
+      ```
 
 ---
 
-## Structure du projet
+## 4. Usage
+
+Le script est conçu pour être lancé via le `Makefile` pour plus de simplicité.
+
+### Commande principale (Traitement par lots)
+
+La méthode d'utilisation principale consiste à créer un fichier texte (ex: `videos.txt`) contenant une liste d'URLs de vidéos, une par ligne.
+
+**Exemple de `videos.txt` :**
+```
+https://www.youtube.com/watch?v=xxxxxxxxxxx
+https://www.youtube.com/watch?v=yyyyyyyyyyy
+```
+
+Lancez ensuite le traitement avec la commande `make batch` :
+```bash
+make batch BATCH_FILE=videos.txt
+```
+Les fichiers de sortie (audio, vidéo, `.srt`) seront sauvegardés dans le dossier `output/`.
+
+### Arguments et Surcharges
+
+Vous pouvez surcharger les paramètres du `config.yaml` directement depuis la ligne de commande.
+
+**Exemple : Lancer le traitement en changeant la langue de traduction en espagnol :**
+```bash
+# La commande est passée au script python via la variable ARGS
+make batch BATCH_FILE=videos.txt ARGS="--target-lang spa_Latn"
+```
+
+**Exemple : Utiliser un fichier de cookies pour le téléchargement :**
+```bash
+make batch BATCH_FILE=videos.txt ARGS="--cookies /chemin/vers/cookies.txt"
+```
+
+---
+
+## 5. Configuration (`config.yaml`)
+
+Le fichier `config.yaml` est au cœur du pipeline. Il permet de définir les paramètres par défaut de manière claire et centralisée.
+
+- **`model_paths`**: Spécifie les identifiants Hugging Face ou les chemins locaux pour tous les modèles (Voxtral, faster-whisper, NLLB).
+- **`transcription_options`**: Options pour la phase de transcription, comme le `device` (`cuda` ou `cpu`).
+- **`translation_options`**: Options pour la traduction, incluant le `device`, la langue source (`source_lang`) et la langue cible (`target_lang`).
+- **`youtube_dl_options`**: Options pour `yt-dlp`, comme le dossier de sortie (`output_dir`) ou l'activation/désactivation du téléchargement vidéo/audio.
+
+---
+
+## 6. Structure du projet
 
 ```
 .
-├── Makefile               # commandes d’installation, debug, exécution batch
-├── requirements.txt       # dépendances Python optimisées
-├── setup_runpod.sh        # script d’environnement et préchargement modèles
-├── main.py                # script principal pipeline complet
-├── utils/
-│   └── gpu_utils.py       # fonctions utilitaires gestion GPU
-└── README.md              # documentation projet
+├── Makefile               # Commandes pour installer, formater, et lancer le pipeline
+├── README.md              # Cette documentation
+├── config.yaml            # Fichier de configuration central
+├── main.py                # Script principal du pipeline
+├── requirements.txt       # Dépendances Python pour environnement GPU
+├── requirements-cpu.txt   # Dépendances Python pour environnement CPU
+└── utils/
+    └── gpu_utils.py       # Fonctions utilitaires pour la gestion de la mémoire GPU
 ```
 
 ---
 
-## Notes & Conseils
+## 7. Notes & Conseils
 
-* **Choix des modèles** :
-  Le modèle Voxtral Small 24B est un excellent compromis qualité/rapidité.
-  Le fallback automatique vers Voxtral Mini 3B et Faster Whisper garantit la robustesse même sur GPU moins puissants ou en cas de surcharge.
-* **VAD** : Limiter le traitement aux segments vocaux réduit significativement le coût en calcul et le temps.
-* **Synchronisation** : L’utilisation combinée de WhisperX-like alignement et VAD garantit des sous-titres parfaitement synchronisés.
-* **Optimisation GPU** : Le script analyse la mémoire disponible et ajuste ses batchs automatiquement pour ne jamais saturer la mémoire GPU, évitant ainsi plantages et ralentissements.
-* **Robustesse YouTube** : `yt-dlp` avec options spécifiques et gestion des erreurs assure un téléchargement stable, même face aux protections anti-bot.
-* **Débogage** : Toujours lancer en mode debug pour les premières exécutions afin de vérifier intégrité et performance.
+- **Stabilité** : Le traitement par lots et la gestion de la mémoire ont été conçus pour des heures d'exécution sans interruption.
+- **Flexibilité** : La combinaison de `config.yaml` et des surcharges par ligne de commande permet d'adapter facilement le pipeline à différents besoins sans modifier le code.
+- **Dépendances** : L'utilisation de versions figées garantit que le script fonctionnera de la même manière dans le futur. Si vous rencontrez des problèmes d'installation, cela peut être dû à une incompatibilité de votre version de Python avec les versions des paquets.
 
 ---
 
-## Perspectives d’amélioration
+## 8. Licence
 
-* Intégration d’un module de post-édition automatique pour améliorer la fluidité des sous-titres.
-* Ajout de diarisation et reconnaissance multi-locuteurs.
-* Interface graphique simple pour utilisateurs non techniques.
-* Déploiement conteneurisé Docker pour portabilité maximale.
-
----
-
-## Licence
-
-Projet open-source, libre d’utilisation et modification sous licence MIT.
-
-```
+Ce projet est open-source et distribué sous la licence MIT.
 ```

@@ -10,6 +10,8 @@ import torch
 import torchaudio
 import yt_dlp
 import yaml
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, MistralForCausalLM
+from mistral_common.tokens.tokenizers.mistral import MistralTokenizer
 from utils.gpu_utils import free_cuda_mem, get_gpu_info
 
 # Configure logging
@@ -114,12 +116,19 @@ def parse_arguments():
 
     # Translation options
     parser.add_argument(
-        "--nllb-model-path",
+        "--translation-model-type",
+        type=str,
+        default=config.get("translation_options", {}).get("model_type", "nllb"),
+        choices=["nllb", "mistral"],
+        help="Type of translation model to use ('nllb' or 'mistral').",
+    )
+    parser.add_argument(
+        "--translation-model-path",
         type=str,
         default=config.get("model_paths", {}).get(
-            "nllb", "facebook/nllb-200-distilled-600M"
+            "translation", "facebook/nllb-200-distilled-600M"
         ),
-        help="Path to the NLLB translation model.",
+        help="Path or Hugging Face identifier for the translation model.",
     )
     parser.add_argument(
         "--source-lang",
@@ -246,34 +255,51 @@ def transcribe_with_faster_whisper(model, audio_path, device):
         free_cuda_mem()
 
 
-def translate_text(text, model, src_lang, tgt_lang, device):
-    """Translates text using NLLB."""
-    from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-
-    logging.info(f"Translating text from {src_lang} to {tgt_lang}")
+def translate_text(text, tokenizer, model, model_type, src_lang, tgt_lang, device):
+    """Translates text using a pre-loaded model and tokenizer."""
+    logging.info(f"Translating text to {tgt_lang} using {model_type} model.")
     try:
-        tokenizer = AutoTokenizer.from_pretrained(model, src_lang=src_lang)
-        translator = AutoModelForSeq2SeqLM.from_pretrained(model).to(device)
-        inputs = tokenizer(text, return_tensors="pt").to(device)
-        translated_tokens = translator.generate(
-            **inputs,
-            forced_bos_token_id=tokenizer.lang_code_to_id[tgt_lang],
-            max_length=1024,
-        )
-        translation = tokenizer.batch_decode(
-            translated_tokens, skip_special_tokens=True
-        )[0]
+        if model_type == 'nllb':
+            inputs = tokenizer(text, return_tensors="pt").to(device)
+            translated_tokens = model.generate(
+                **inputs,
+                forced_bos_token_id=tokenizer.lang_code_to_id[tgt_lang],
+                max_length=1024,
+            )
+            translation = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
+
+        elif model_type == 'mistral':
+            # This is the high-quality prompt for translating Turkish drama dialogues to French
+            # This prompt is designed to be general while capturing the user's specific request for quality.
+            lang_map = {"fra_Latn": "French", "eng_Latn": "English"} # Simple mapping for now
+            target_language_name = lang_map.get(tgt_lang, tgt_lang)
+            system_prompt = (
+                f"You are an expert translator. Your task is to translate the following text into {target_language_name}. "
+                "The text is dialogue from a dramatic series. It is crucial to preserve the emotional tone, "
+                "cultural nuances, and dramatic weight of the original dialogue. "
+                "The translation must be fluid, natural, and faithful to the original's intent and subtext."
+            )
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": text},
+            ]
+            # This logic is based on the model card for mistralai/Mistral-Small-3.2-24B-Instruct-2506
+            from mistral_common.protocol.instruct.request import ChatCompletionRequest
+            tokenized = tokenizer.encode_chat_completion(ChatCompletionRequest(messages=messages))
+            input_ids = torch.tensor([tokenized.tokens]).to(device)
+
+            translated_tokens = model.generate(
+                input_ids=input_ids,
+                max_new_tokens=1024,
+            )[0]
+            # Exclude the prompt from the output
+            translation = tokenizer.decode(translated_tokens[len(tokenized.tokens):])
+
         logging.info("Translation successful.")
         return translation
     except Exception as e:
         logging.error(f"Translation failed: {e}")
         return None
-    finally:
-        if "translator" in locals():
-            del translator
-        if "tokenizer" in locals():
-            del tokenizer
-        free_cuda_mem()
 
 
 def format_timestamp(seconds):
@@ -314,6 +340,27 @@ def main():
             model_cache[model_name] = model_loader(*loader_args)
             logging.info(f"{model_name} loaded.")
         return model_cache[model_name]
+
+    # Load translation model and tokenizer once
+    translation_model = None
+    translation_tokenizer = None
+    if args.target_lang and args.source_lang != args.target_lang:
+        logging.info(f"Loading translation model: {args.translation_model_path}")
+        try:
+            if args.translation_model_type == 'nllb':
+                translation_tokenizer = AutoTokenizer.from_pretrained(args.translation_model_path, src_lang=args.source_lang)
+                translation_model = AutoModelForSeq2SeqLM.from_pretrained(args.translation_model_path).to(args.translation_device)
+            elif args.translation_model_type == 'mistral':
+                # Note: This part cannot be tested in the current environment due to space constraints.
+                translation_tokenizer = MistralTokenizer.from_hf_hub(args.translation_model_path)
+                translation_model = MistralForCausalLM.from_pretrained(
+                    args.translation_model_path, torch_dtype=torch.bfloat16
+                ).to(args.translation_device)
+            logging.info("Translation model loaded successfully.")
+        except Exception as e:
+            logging.error(f"Failed to load translation model: {e}")
+            logging.error("Please ensure the model path is correct and dependencies are installed.")
+            # We don't exit here, as transcription might still be desired.
 
     if args.batch_list:
         try:
@@ -366,13 +413,15 @@ def main():
         generate_srt(transcription["segments"], srt_path)
 
         # Translation
-        if args.target_lang and args.source_lang != args.target_lang:
+        if translation_model and translation_tokenizer:
             translated_text = translate_text(
-                transcription["text"],
-                args.nllb_model_path,
-                args.source_lang,
-                args.target_lang,
-                args.translation_device,
+                text=transcription["text"],
+                tokenizer=translation_tokenizer,
+                model=translation_model,
+                model_type=args.translation_model_type,
+                src_lang=args.source_lang,
+                tgt_lang=args.target_lang,
+                device=args.translation_device,
             )
             if translated_text:
                 translated_srt_path = os.path.join(

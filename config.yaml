@@ -9,7 +9,7 @@ model_paths:
   voxtral_small: "collabora/whisperspeech_asr_small_en"
   voxtral_mini: "collabora/whisperspeech_asr_mini_en"
   faster_whisper: "ctranslate2-4you/whisper-small-en-ct2-int8"
-  nllb: "facebook/nllb-200-distilled-600M"
+  translation: "facebook/nllb-200-distilled-600M"
 
 # -----------------------------------------------------------------------------
 # Transcription Options
@@ -26,10 +26,13 @@ transcription_options:
 translation_options:
   # Device for the translation model. "cuda" for GPU, "cpu" for CPU.
   device: "cuda"
-  # Source language in NLLB format (e.g., "eng_Latn" for English).
+  # The type of model to use for translation.
+  # "nllb" for the original NLLB model (requires source_lang).
+  # "mistral" for a Mistral instruct model (source language is detected automatically).
+  model_type: "nllb"
+  # Source language for translation. Required for NLLB, ignored for Mistral.
   source_lang: "eng_Latn"
   # Target language for translation (e.g., "fra_Latn" for French).
-  # Set to the same as source_lang to disable translation.
   target_lang: "fra_Latn"
 
 # -----------------------------------------------------------------------------

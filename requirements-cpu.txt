@@ -1,9 +1,9 @@
 # -----------------------------------------------------------------------------
 # Core Dependencies (CPU-only)
 # -----------------------------------------------------------------------------
-# Note: This file specifies CPU-only versions of torch.
-torch==2.1.0 --index-url https://download.pytorch.org/whl/cpu
-torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cpu
+# Note: Using a more recent, compatible version of torch for this environment.
+torch==2.2.0
+torchaudio==2.2.0
 transformers==4.35.2
 accelerate==0.25.0
 yt-dlp==2023.11.16
@@ -11,14 +11,20 @@ PyYAML==6.0.1
 # -----------------------------------------------------------------------------
 # ASR (Transcription) Models
 # -----------------------------------------------------------------------------
+# Note: Updated ctranslate2 to v4 to resolve faster-whisper dependency conflict.
 whisperspeech==0.1.1
-silero-vad==4.0
+silero-vad==5.1.2
 faster-whisper==0.10.0
-ctranslate2==3.22.0
+ctranslate2==4.2.1
 # -----------------------------------------------------------------------------
 # Translation Models
 # -----------------------------------------------------------------------------
 sentencepiece==0.1.99
+mistral_common==1.2.0
+# -----------------------------------------------------------------------------
+# UI/UX
+# -----------------------------------------------------------------------------
+tqdm==4.66.1
 # -----------------------------------------------------------------------------
 # Optional - for Code Formatting
 # -----------------------------------------------------------------------------

@@ -13,6 +13,17 @@ import yaml
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, MistralForCausalLM
 from mistral_common.tokens.tokenizers.mistral import MistralTokenizer
 from utils.gpu_utils import free_cuda_mem, get_gpu_info
+from dataclasses import dataclass
+from tqdm import tqdm
+
+
+@dataclass
+class SimpleSegment:
+    """A simple container for a transcription segment."""
+    start: float
+    end: float
+    text: str
+
 
 # Configure logging
 logging.basicConfig(
@@ -202,6 +213,8 @@ def download_media(url, output_dir, download_video, download_audio, cookies_file
 
     except Exception as e:
         logging.error(f"An error occurred during download: {e}")
+        logging.error("This could be due to a network issue, a private/deleted video, or YouTube blocking the request.")
+        logging.error("TIP: For YouTube, try using a cookies file with --cookies to bypass potential restrictions.")
 
     return video_path, audio_path
 
@@ -359,8 +372,8 @@ def main():
             logging.info("Translation model loaded successfully.")
         except Exception as e:
             logging.error(f"Failed to load translation model: {e}")
-            logging.error("Please ensure the model path is correct and dependencies are installed.")
-            # We don't exit here, as transcription might still be desired.
+            logging.error("This could be due to an incorrect model path, insufficient VRAM, or missing dependencies.")
+            logging.warning("Transcription will proceed, but translation will be skipped.")
 
     if args.batch_list:
         try:
@@ -373,86 +386,107 @@ def main():
         logging.error("No batch list provided. Please specify with --batch-list.")
         return
 
-    for url in video_urls:
-        logging.info(f"Processing video: {url}")
+    for i, url in enumerate(video_urls):
+        logging.info(f"\n{'='*60}")
+        logging.info(f"Processing video {i+1}/{len(video_urls)}: {url}")
+        logging.info(f"{'='*60}")
         start_time = time.time()
 
-        _, audio_path = download_media(
+        # Step 1: Download
+        logging.info("\n[Step 1/4] Downloading Media...")
+        video_path, audio_path = download_media(
             url, args.output_dir, args.download_video, args.download_audio, args.cookies
         )
 
         if not audio_path or not os.path.exists(audio_path):
-            logging.error(f"Audio download failed for {url}. Skipping.")
+            logging.error(f"Audio download failed for {url}. Skipping to next video.")
             continue
+        logging.info("[Step 1/4] Download complete.")
 
-        # ASR Fallback Chain
+        # Step 2: Transcription
+        logging.info("\n[Step 2/4] Transcribing Audio...")
         transcription = None
         # 1. Try Voxtral Small
         if not transcription:
+            logging.info("Attempting transcription with Voxtral Small...")
             transcription = transcribe_with_voxtral(
                 args.voxtral_small_model_path, audio_path, args.transcription_device
             )
         # 2. Try Voxtral Mini
         if not transcription:
+            logging.warning("Voxtral Small failed, trying Voxtral Mini...")
             transcription = transcribe_with_voxtral(
                 args.voxtral_mini_model_path, audio_path, args.transcription_device
             )
         # 3. Try faster-whisper
         if not transcription:
+            logging.warning("Voxtral Mini failed, trying faster-whisper...")
             transcription = transcribe_with_faster_whisper(
                 args.faster_whisper_model_path, audio_path, args.transcription_device
             )
 
         if not transcription or "segments" not in transcription:
             logging.error(f"All transcription attempts failed for {url}. Skipping.")
-            os.remove(audio_path)  # Clean up audio file
+            os.remove(audio_path)
             continue
+        logging.info("[Step 2/4] Transcription complete.")
 
+        # Step 3: Generate original SRT
+        logging.info("\n[Step 3/4] Generating Original Language SRT File...")
         base_filename = os.path.splitext(os.path.basename(audio_path))[0]
         srt_path = os.path.join(args.output_dir, f"{base_filename}.srt")
         generate_srt(transcription["segments"], srt_path)
+        logging.info(f"Original SRT file saved to: {srt_path}")
 
-        # Translation
+        # Step 4: Translation
         if translation_model and translation_tokenizer:
-            translated_text = translate_text(
-                text=transcription["text"],
-                tokenizer=translation_tokenizer,
-                model=translation_model,
-                model_type=args.translation_model_type,
-                src_lang=args.source_lang,
-                tgt_lang=args.target_lang,
-                device=args.translation_device,
-            )
-            if translated_text:
+            logging.info("\n[Step 4/4] Translating Segments...")
+            translated_segments = []
+
+            for segment in tqdm(transcription["segments"], desc="Translating segments"):
+                translated_text = translate_text(
+                    text=segment.text,
+                    tokenizer=translation_tokenizer,
+                    model=translation_model,
+                    model_type=args.translation_model_type,
+                    src_lang=args.source_lang,
+                    tgt_lang=args.target_lang,
+                    device=args.translation_device,
+                )
+                if translated_text:
+                    translated_segments.append(
+                        SimpleSegment(start=segment.start, end=segment.end, text=translated_text)
+                    )
+                else:
+                    logging.warning(f"Translation failed for segment: '{segment.text.strip()}'.")
+
+            if translated_segments:
                 translated_srt_path = os.path.join(
                     args.output_dir, f"{base_filename}_{args.target_lang}.srt"
                 )
-                # This is a simplification; a real implementation would need
-                # to align translated sentences with original timestamps.
-                # For now, we'll just save the full translated text.
-                try:
-                    with open(
-                        translated_srt_path.replace(".srt", ".txt"),
-                        "w",
-                        encoding="utf-8",
-                    ) as f:
-                        f.write(translated_text)
-                    logging.info(
-                        f"Full translated text saved to {translated_srt_path.replace('.srt', '.txt')}"
-                    )
-                except Exception as e:
-                    logging.error(f"Could not save translated text: {e}")
+                generate_srt(translated_segments, translated_srt_path)
+                logging.info(f"Translated SRT file saved to: {translated_srt_path}")
+            else:
+                logging.warning("Translation resulted in no segments. No translated SRT file generated.")
 
-        # Cleanup
-        os.remove(audio_path)
+        logging.info("\n[Cleanup] Removing temporary files...")
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+            logging.info(f"-> Deleted audio file: {audio_path}")
+        if 'video_path' in locals() and video_path and os.path.exists(video_path):
+            os.remove(video_path)
+            logging.info(f"-> Deleted video file: {video_path}")
         free_cuda_mem()
 
         end_time = time.time()
-        logging.info(
-            f"Finished processing {url} in {end_time - start_time:.2f} seconds."
-        )
+        logging.info(f"\nFinished processing in {end_time - start_time:.2f} seconds.")
 
     logging.info("Batch processing complete.")
+    logging.info("\n" + "="*60)
+    logging.info("Done. All videos processed.")
+    logging.info("NOTE: To free up more disk space, you can manually clear the Hugging Face model cache, usually located at `~/.cache/huggingface/hub`.")
+    logging.info("The 'make clean' command can also be used to clear the 'output' directory.")
+    logging.info("="*60 + "\n")
 
 
 if __name__ == "__main__":

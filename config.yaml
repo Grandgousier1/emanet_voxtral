@@ -3,13 +3,23 @@
 # -----------------------------------------------------------------------------
 # Model Paths
 # -----------------------------------------------------------------------------
-# Specifies the pre-trained models to be used for transcription and translation.
-# These can be local paths or Hugging Face model identifiers.
+# Specifies the pre-trained models to be used.
 model_paths:
-  voxtral_small: "collabora/whisperspeech_asr_small_en"
-  voxtral_mini: "collabora/whisperspeech_asr_mini_en"
-  faster_whisper: "ctranslate2-4you/whisper-small-en-ct2-int8"
-  translation: "facebook/nllb-200-distilled-600M"
+  # The primary model for the 'voxtral_single_step' pipeline.
+  voxtral: "mistralai/Voxtral-Small-24B-2507"
+  # Fallback ASR model for the 'two_step' pipeline.
+  faster_whisper: "ctranslate2-4you/whisper-large-v2-ct2-int8"
+  # Translation model for the 'two_step' pipeline (NLLB).
+  nllb_translation: "facebook/nllb-200-distilled-600M"
+
+# -----------------------------------------------------------------------------
+# Pipeline Options
+# -----------------------------------------------------------------------------
+# Defines the overall behavior of the pipeline.
+pipeline_options:
+  # "two_step": Classic approach. Transcribe first, then translate. Works with any ASR/translation model combination.
+  # "voxtral_single_step": Uses Voxtral's audio instruct capability to transcribe and translate in one pass.
+  type: "voxtral_single_step"
 
 # -----------------------------------------------------------------------------
 # Transcription Options
@@ -26,14 +36,16 @@ transcription_options:
 translation_options:
   # Device for the translation model. "cuda" for GPU, "cpu" for CPU.
   device: "cuda"
-  # The type of model to use for translation.
-  # "nllb" for the original NLLB model (requires source_lang).
-  # "mistral" for a Mistral instruct model (source language is detected automatically).
+  # The type of model to use for translation in the 'two_step' pipeline.
+  # The 'voxtral_single_step' pipeline does not use this.
   model_type: "nllb"
-  # Source language for translation. Required for NLLB, ignored for Mistral.
-  source_lang: "eng_Latn"
-  # Target language for translation (e.g., "fra_Latn" for French).
-  target_lang: "fra_Latn"
+  # Source language for NLLB translation. Ignored by Voxtral.
+  # Example: "tur_Latn" for Turkish
+  source_lang: "tur_Latn"
+  # Target language for translation.
+  # For 'voxtral_single_step', use full names (e.g., "French", "Spanish").
+  # For 'two_step' with NLLB, use codes (e.g., "fra_Latn", "spa_Latn").
+  target_lang: "French"
 
 # -----------------------------------------------------------------------------
 # YouTube Download (yt-dlp) Options

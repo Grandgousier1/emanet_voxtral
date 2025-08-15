@@ -1,28 +1,29 @@
-# -----------------------------------------------------------------------------
-# Core Dependencies
-# -----------------------------------------------------------------------------
-torch==2.3.1
-torchaudio==2.3.1
-transformers==4.35.2
-accelerate==0.25.0
-yt-dlp==2023.11.16
-PyYAML==6.0.1
-# -----------------------------------------------------------------------------
-# ASR (Transcription) Models
-# -----------------------------------------------------------------------------
-# Voxtral (whisperspeech)
-whisperspeech==0.1.1
-# Use the PyPI version of silero-vad, not the git version, to avoid issues
-silero-vad==5.1.2
-# faster-whisper
-faster-whisper==0.10.0
-ctranslate2==4.0.0
-# -----------------------------------------------------------------------------
-# Translation Models
-# -----------------------------------------------------------------------------
-sentencepiece==0.2.0
-mistral_common==1.6.2
-# -----------------------------------------------------------------------------
-# Optional - for Code Formatting
-# -----------------------------------------------------------------------------
-black==23.11.0
+# This file contains the Python dependencies for the GPU environment.
+# It is recommended to install these in a virtual environment.
+
+# Core ML/DL framework
+torch>=2.0.0
+
+# Hugging Face libraries for models and processing
+# Voxtral requires transformers >= 4.54.0
+transformers>=4.54.0
+# Voxtral requires mistral-common with audio support
+mistral-common[audio]>=1.8.1
+
+# ASR / Transcription libraries
+# Used in the "two_step" pipeline
+whisperspeech
+# Used as a fallback ASR model
+faster-whisper
+
+# YouTube downloader
+yt-dlp
+
+# Configuration file parsing
+PyYAML
+
+# Progress bars
+tqdm
+
+# For audio processing
+torchaudio

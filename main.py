@@ -10,8 +10,12 @@ import torch
 import torchaudio
 import yt_dlp
 import yaml
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, MistralForCausalLM
-from mistral_common.tokens.tokenizers.mistral import MistralTokenizer
+from transformers import (
+    AutoModelForSeq2SeqLM,
+    AutoTokenizer,
+    AutoProcessor,
+    VoxtralForConditionalGeneration,
+)
 from utils.gpu_utils import free_cuda_mem, get_gpu_info
 from dataclasses import dataclass
 from tqdm import tqdm
@@ -62,6 +66,15 @@ def parse_arguments():
             "youtube_dl_options": {},
         }
 
+    # Pipeline options
+    parser.add_argument(
+        "--pipeline-type",
+        type=str,
+        default=config.get("pipeline_options", {}).get("type", "voxtral_single_step"),
+        choices=["two_step", "voxtral_single_step"],
+        help="The type of pipeline to run.",
+    )
+
     # Batch processing
     parser.add_argument(
         "--batch-list", type=str, help="Path to a text file with a list of video URLs."
@@ -93,65 +106,63 @@ def parse_arguments():
         help="Path to a cookies.txt file for yt-dlp.",
     )
 
-    # Transcription options
+    # Model and device options
     parser.add_argument(
-        "--voxtral-small-model-path",
+        "--voxtral-model-path",
         type=str,
         default=config.get("model_paths", {}).get(
-            "voxtral_small", "collabora/whisperspeech_asr_small_en"
+            "voxtral", "mistralai/Voxtral-Small-24B-2507"
         ),
-        help="Path to the Voxtral Small ASR model.",
-    )
-    parser.add_argument(
-        "--voxtral-mini-model-path",
-        type=str,
-        default=config.get("model_paths", {}).get(
-            "voxtral_mini", "collabora/whisperspeech_asr_mini_en"
-        ),
-        help="Path to the Voxtral Mini ASR model.",
+        help="Path to the Voxtral model (used in both pipelines).",
     )
     parser.add_argument(
         "--faster-whisper-model-path",
         type=str,
         default=config.get("model_paths", {}).get(
-            "faster_whisper", "ctranslate2-4you/whisper-small-en-ct2-int8"
+            "faster_whisper", "ctranslate2-4you/whisper-large-v2-ct2-int8"
         ),
-        help="Path to the faster-whisper ASR model.",
+        help="Path to the faster-whisper ASR model (fallback for 'two_step' pipeline).",
+    )
+    parser.add_argument(
+        "--nllb-model-path",
+        type=str,
+        default=config.get("model_paths", {}).get(
+            "nllb_translation", "facebook/nllb-200-distilled-600M"
+        ),
+        help="Path to the NLLB translation model (for 'two_step' pipeline).",
     )
     parser.add_argument(
         "--transcription-device",
         type=str,
         default=config.get("transcription_options", {}).get("device", "cuda"),
-        help="Device to use for transcription (e.g., 'cuda', 'cpu').",
+        help="Device to use for transcription models (e.g., 'cuda', 'cpu').",
+    )
+    parser.add_argument(
+        "--translation-device",
+        type=str,
+        default=config.get("translation_options", {}).get("device", "cuda"),
+        help="Device to use for translation models (e.g., 'cuda', 'cpu').",
     )
 
-    # Translation options
+    # Language and translation options
     parser.add_argument(
         "--translation-model-type",
         type=str,
         default=config.get("translation_options", {}).get("model_type", "nllb"),
-        choices=["nllb", "mistral"],
-        help="Type of translation model to use ('nllb' or 'mistral').",
-    )
-    parser.add_argument(
-        "--translation-model-path",
-        type=str,
-        default=config.get("model_paths", {}).get(
-            "translation", "facebook/nllb-200-distilled-600M"
-        ),
-        help="Path or Hugging Face identifier for the translation model.",
+        choices=["nllb"],
+        help="Type of translation model for the 'two_step' pipeline (currently only 'nllb' is supported).",
     )
     parser.add_argument(
         "--source-lang",
         type=str,
-        default=config.get("translation_options", {}).get("source_lang", "eng_Latn"),
-        help="Source language for translation.",
+        default=config.get("translation_options", {}).get("source_lang", "tur_Latn"),
+        help="Source language for 'two_step' NLLB translation.",
     )
     parser.add_argument(
         "--target-lang",
         type=str,
-        default=config.get("translation_options", {}).get("target_lang", "fra_Latn"),
-        help="Target language for translation.",
+        default=config.get("translation_options", {}).get("target_lang", "French"),
+        help="Target language. Use full names for Voxtral (e.g., 'French'), codes for NLLB (e.g., 'fra_Latn').",
     )
     parser.add_argument(
         "--translation-device",
@@ -255,10 +266,18 @@ def transcribe_with_faster_whisper(model, audio_path, device):
                 compute_type = "int8"
 
         whisper_model = WhisperModel(model, device=device, compute_type=compute_type)
-        segments, _ = whisper_model.transcribe(audio_path, beam_size=5)
-        transcription = "".join([segment.text for segment in segments])
+        segments, info = whisper_model.transcribe(audio_path, beam_size=5)
+
+        # faster-whisper returns a generator, convert segments to a list
+        segment_list = list(segments)
+
+        transcription = "".join([segment.text for segment in segment_list])
         logging.info("faster-whisper transcription successful.")
-        return {"text": transcription, "segments": list(segments)}
+
+        # Create SimpleSegment objects for SRT generation
+        simple_segments = [SimpleSegment(start=s.start, end=s.end, text=s.text) for s in segment_list]
+
+        return {"text": transcription, "segments": simple_segments}
     except Exception as e:
         logging.error(f"faster-whisper transcription failed: {e}")
         return None
@@ -268,50 +287,71 @@ def transcribe_with_faster_whisper(model, audio_path, device):
         free_cuda_mem()
 
 
-def translate_text(text, tokenizer, model, model_type, src_lang, tgt_lang, device):
-    """Translates text using a pre-loaded model and tokenizer."""
-    logging.info(f"Translating text to {tgt_lang} using {model_type} model.")
+def transcribe_and_translate_with_voxtral(model, processor, audio_path, target_lang, device):
+    """
+    Performs transcription and translation in a single step using Voxtral's
+    audio instruct capabilities.
+    """
+    logging.info(f"Attempting single-step transcription and translation to '{target_lang}' with Voxtral.")
     try:
-        if model_type == 'nllb':
-            inputs = tokenizer(text, return_tensors="pt").to(device)
-            translated_tokens = model.generate(
-                **inputs,
-                forced_bos_token_id=tokenizer.lang_code_to_id[tgt_lang],
-                max_length=1024,
-            )
-            translation = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
+        conversation = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "audio", "path": audio_path},
+                    {"type": "text", "text": f"Translate the following audio to {target_lang}."},
+                ],
+            }
+        ]
 
-        elif model_type == 'mistral':
-            # This is the high-quality prompt for translating Turkish drama dialogues to French
-            # This prompt is designed to be general while capturing the user's specific request for quality.
-            lang_map = {"fra_Latn": "French", "eng_Latn": "English"} # Simple mapping for now
-            target_language_name = lang_map.get(tgt_lang, tgt_lang)
-            system_prompt = (
-                f"You are an expert translator. Your task is to translate the following text into {target_language_name}. "
-                "The text is dialogue from a dramatic series. It is crucial to preserve the emotional tone, "
-                "cultural nuances, and dramatic weight of the original dialogue. "
-                "The translation must be fluid, natural, and faithful to the original's intent and subtext."
-            )
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": text},
-            ]
-            # This logic is based on the model card for mistralai/Mistral-Small-3.2-24B-Instruct-2506
-            from mistral_common.protocol.instruct.request import ChatCompletionRequest
-            tokenized = tokenizer.encode_chat_completion(ChatCompletionRequest(messages=messages))
-            input_ids = torch.tensor([tokenized.tokens]).to(device)
+        inputs = processor.apply_chat_template(conversation, return_tensors="pt")
+        inputs = inputs.to(device, dtype=torch.bfloat16)
 
-            translated_tokens = model.generate(
-                input_ids=input_ids,
-                max_new_tokens=1024,
-            )[0]
-            # Exclude the prompt from the output
-            translation = tokenizer.decode(translated_tokens[len(tokenized.tokens):])
+        outputs = model.generate(**inputs, max_new_tokens=1024)
+        decoded_outputs = processor.batch_decode(outputs[:, inputs.input_ids.shape[1]:], skip_special_tokens=True)
 
+        translated_text = decoded_outputs[0]
+        logging.info("Voxtral single-step translation successful.")
+
+        # Voxtral does not provide timed segments, so we create one segment for the whole audio.
+        # We need the audio duration to create a valid SRT.
+        waveform, sample_rate = torchaudio.load(audio_path)
+        duration = waveform.shape[1] / sample_rate
+
+        single_segment = SimpleSegment(start=0, end=duration, text=translated_text)
+
+        return {"text": translated_text, "segments": [single_segment]}
+
+    except Exception as e:
+        logging.error(f"Voxtral single-step translation failed: {e}")
+        return None
+    finally:
+        # No need to del model/processor as they are managed outside
+        free_cuda_mem()
+
+
+def translate_text(text, tokenizer, model, model_type, src_lang, tgt_lang, device):
+    """
+    Translates text using a pre-loaded NLLB model and tokenizer.
+    This function is only used in the 'two_step' pipeline.
+    """
+    logging.info(f"Translating text to {tgt_lang} using {model_type} model.")
+    if model_type != 'nllb':
+        logging.error(f"The 'two_step' pipeline currently only supports 'nllb' for translation, but got '{model_type}'.")
+        return None
+
+    try:
+        inputs = tokenizer(text, return_tensors="pt").to(device)
+        translated_tokens = model.generate(
+            **inputs,
+            forced_bos_token_id=tokenizer.lang_code_to_id[tgt_lang],
+            max_length=1024,
+        )
+        translation = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
         logging.info("Translation successful.")
         return translation
     except Exception as e:
-        logging.error(f"Translation failed: {e}")
+        logging.error(f"NLLB Translation failed: {e}")
         return None
 
 
@@ -354,26 +394,38 @@ def main():
             logging.info(f"{model_name} loaded.")
         return model_cache[model_name]
 
-    # Load translation model and tokenizer once
+    # --- Model Loading ---
+    voxtral_model = None
+    voxtral_processor = None
     translation_model = None
     translation_tokenizer = None
-    if args.target_lang and args.source_lang != args.target_lang:
-        logging.info(f"Loading translation model: {args.translation_model_path}")
+
+    if args.pipeline_type == "voxtral_single_step":
+        logging.info(f"Loading Voxtral model for single-step translation: {args.voxtral_model_path}")
         try:
-            if args.translation_model_type == 'nllb':
-                translation_tokenizer = AutoTokenizer.from_pretrained(args.translation_model_path, src_lang=args.source_lang)
-                translation_model = AutoModelForSeq2SeqLM.from_pretrained(args.translation_model_path).to(args.translation_device)
-            elif args.translation_model_type == 'mistral':
-                # Note: This part cannot be tested in the current environment due to space constraints.
-                translation_tokenizer = MistralTokenizer.from_hf_hub(args.translation_model_path)
-                translation_model = MistralForCausalLM.from_pretrained(
-                    args.translation_model_path, torch_dtype=torch.bfloat16
-                ).to(args.translation_device)
-            logging.info("Translation model loaded successfully.")
+            voxtral_processor = AutoProcessor.from_pretrained(args.voxtral_model_path)
+            voxtral_model = VoxtralForConditionalGeneration.from_pretrained(
+                args.voxtral_model_path, torch_dtype=torch.bfloat16, device_map=args.transcription_device
+            )
+            logging.info("Voxtral model loaded successfully.")
         except Exception as e:
-            logging.error(f"Failed to load translation model: {e}")
-            logging.error("This could be due to an incorrect model path, insufficient VRAM, or missing dependencies.")
-            logging.warning("Transcription will proceed, but translation will be skipped.")
+            logging.error(f"Failed to load Voxtral model: {e}")
+            logging.error("Cannot proceed with single-step pipeline. Please check model path and dependencies.")
+            return # Exit if the main model can't be loaded
+
+    elif args.pipeline_type == "two_step":
+        if args.target_lang and args.source_lang != args.target_lang:
+            logging.info(f"Loading translation model for two-step pipeline: {args.nllb_model_path}")
+            try:
+                if args.translation_model_type == 'nllb':
+                    translation_tokenizer = AutoTokenizer.from_pretrained(args.nllb_model_path, src_lang=args.source_lang)
+                    translation_model = AutoModelForSeq2SeqLM.from_pretrained(args.nllb_model_path).to(args.translation_device)
+                # The mistral option for two-step is removed for simplicity.
+                # It can be re-added if necessary.
+                logging.info("Translation model loaded successfully.")
+            except Exception as e:
+                logging.error(f"Failed to load translation model: {e}")
+                logging.warning("Translation will be skipped.")
 
     if args.batch_list:
         try:
@@ -403,71 +455,85 @@ def main():
             continue
         logging.info("[Step 1/4] Download complete.")
 
-        # Step 2: Transcription
-        logging.info("\n[Step 2/4] Transcribing Audio...")
-        transcription = None
-        # 1. Try Voxtral Small
-        if not transcription:
-            logging.info("Attempting transcription with Voxtral Small...")
-            transcription = transcribe_with_voxtral(
-                args.voxtral_small_model_path, audio_path, args.transcription_device
-            )
-        # 2. Try Voxtral Mini
-        if not transcription:
-            logging.warning("Voxtral Small failed, trying Voxtral Mini...")
-            transcription = transcribe_with_voxtral(
-                args.voxtral_mini_model_path, audio_path, args.transcription_device
-            )
-        # 3. Try faster-whisper
-        if not transcription:
-            logging.warning("Voxtral Mini failed, trying faster-whisper...")
-            transcription = transcribe_with_faster_whisper(
-                args.faster_whisper_model_path, audio_path, args.transcription_device
-            )
-
-        if not transcription or "segments" not in transcription:
-            logging.error(f"All transcription attempts failed for {url}. Skipping.")
-            os.remove(audio_path)
-            continue
-        logging.info("[Step 2/4] Transcription complete.")
-
-        # Step 3: Generate original SRT
-        logging.info("\n[Step 3/4] Generating Original Language SRT File...")
         base_filename = os.path.splitext(os.path.basename(audio_path))[0]
-        srt_path = os.path.join(args.output_dir, f"{base_filename}.srt")
-        generate_srt(transcription["segments"], srt_path)
-        logging.info(f"Original SRT file saved to: {srt_path}")
 
-        # Step 4: Translation
-        if translation_model and translation_tokenizer:
-            logging.info("\n[Step 4/4] Translating Segments...")
-            translated_segments = []
+        if args.pipeline_type == "voxtral_single_step":
+            # --- Single-Step Pipeline ---
+            logging.info("\n[Step 2/2] Performing Single-Step Transcription and Translation...")
+            result = transcribe_and_translate_with_voxtral(
+                voxtral_model, voxtral_processor, audio_path, args.target_lang, args.transcription_device
+            )
 
-            for segment in tqdm(transcription["segments"], desc="Translating segments"):
-                translated_text = translate_text(
-                    text=segment.text,
-                    tokenizer=translation_tokenizer,
-                    model=translation_model,
-                    model_type=args.translation_model_type,
-                    src_lang=args.source_lang,
-                    tgt_lang=args.target_lang,
-                    device=args.translation_device,
+            if not result or "segments" not in result:
+                logging.error(f"Single-step translation failed for {url}. Skipping.")
+                os.remove(audio_path)
+                continue
+
+            translated_srt_path = os.path.join(
+                args.output_dir, f"{base_filename}_{args.target_lang}.srt"
+            )
+            generate_srt(result["segments"], translated_srt_path)
+            logging.info(f"Translated SRT file saved to: {translated_srt_path}")
+
+        elif args.pipeline_type == "two_step":
+            # --- Two-Step Pipeline ---
+            # Step 2: Transcription
+            logging.info("\n[Step 2/4] Transcribing Audio...")
+            transcription = None
+            # 1. Try Voxtral model for transcription
+            logging.info("Attempting transcription with Voxtral...")
+            transcription = transcribe_with_voxtral(
+                args.voxtral_model_path, audio_path, args.transcription_device
+            )
+            # 2. Fallback to faster-whisper
+            if not transcription:
+                logging.warning("Voxtral transcription failed, falling back to faster-whisper...")
+                transcription = transcribe_with_faster_whisper(
+                    args.faster_whisper_model_path, audio_path, args.transcription_device
                 )
-                if translated_text:
-                    translated_segments.append(
-                        SimpleSegment(start=segment.start, end=segment.end, text=translated_text)
+
+            if not transcription or "segments" not in transcription:
+                logging.error(f"All transcription attempts failed for {url}. Skipping.")
+                os.remove(audio_path)
+                continue
+            logging.info("[Step 2/4] Transcription complete.")
+
+            # Step 3: Generate original SRT
+            logging.info("\n[Step 3/4] Generating Original Language SRT File...")
+            srt_path = os.path.join(args.output_dir, f"{base_filename}.srt")
+            generate_srt(transcription["segments"], srt_path)
+            logging.info(f"Original SRT file saved to: {srt_path}")
+
+            # Step 4: Translation
+            if translation_model and translation_tokenizer:
+                logging.info("\n[Step 4/4] Translating Segments...")
+                translated_segments = []
+
+                for segment in tqdm(transcription["segments"], desc="Translating segments"):
+                    translated_text = translate_text(
+                        text=segment.text,
+                        tokenizer=translation_tokenizer,
+                        model=translation_model,
+                        model_type=args.translation_model_type,
+                        src_lang=args.source_lang,
+                        tgt_lang=args.target_lang,
+                        device=args.translation_device,
                     )
-                else:
-                    logging.warning(f"Translation failed for segment: '{segment.text.strip()}'.")
+                    if translated_text:
+                        translated_segments.append(
+                            SimpleSegment(start=segment.start, end=segment.end, text=translated_text)
+                        )
+                    else:
+                        logging.warning(f"Translation failed for segment: '{segment.text.strip()}'.")
 
-            if translated_segments:
-                translated_srt_path = os.path.join(
-                    args.output_dir, f"{base_filename}_{args.target_lang}.srt"
-                )
-                generate_srt(translated_segments, translated_srt_path)
-                logging.info(f"Translated SRT file saved to: {translated_srt_path}")
-            else:
-                logging.warning("Translation resulted in no segments. No translated SRT file generated.")
+                if translated_segments:
+                    translated_srt_path = os.path.join(
+                        args.output_dir, f"{base_filename}_{args.target_lang}.srt"
+                    )
+                    generate_srt(translated_segments, translated_srt_path)
+                    logging.info(f"Translated SRT file saved to: {translated_srt_path}")
+                else:
+                    logging.warning("Translation resulted in no segments. No translated SRT file generated.")
 
         logging.info("\n[Cleanup] Removing temporary files...")
         if os.path.exists(audio_path):

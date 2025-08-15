@@ -1,31 +1,30 @@
-# -----------------------------------------------------------------------------
-# Core Dependencies (CPU-only)
-# -----------------------------------------------------------------------------
-# Note: Using a more recent, compatible version of torch for this environment.
-torch==2.2.0
-torchaudio==2.2.0
-transformers==4.35.2
-accelerate==0.25.0
-yt-dlp==2023.11.16
-PyYAML==6.0.1
-# -----------------------------------------------------------------------------
-# ASR (Transcription) Models
-# -----------------------------------------------------------------------------
-# Note: Updated ctranslate2 to v4 to resolve faster-whisper dependency conflict.
-whisperspeech==0.1.1
-silero-vad==5.1.2
-faster-whisper==0.10.0
-ctranslate2==4.2.1
-# -----------------------------------------------------------------------------
-# Translation Models
-# -----------------------------------------------------------------------------
-sentencepiece==0.1.99
-mistral_common==1.2.0
-# -----------------------------------------------------------------------------
-# UI/UX
-# -----------------------------------------------------------------------------
-tqdm==4.66.1
-# -----------------------------------------------------------------------------
-# Optional - for Code Formatting
-# -----------------------------------------------------------------------------
-black==23.11.0
+# This file contains the Python dependencies for a CPU-only environment.
+# Note: Performance will be significantly slower than with a GPU.
+
+# Core ML/DL framework (CPU version)
+# Find the correct version for your system at https://pytorch.org/get-started/locally/
+torch
+
+# Hugging Face libraries for models and processing
+# Voxtral requires transformers >= 4.54.0
+transformers>=4.54.0
+# Voxtral requires mistral-common with audio support
+mistral-common[audio]>=1.8.1
+
+# ASR / Transcription libraries
+# Used in the "two_step" pipeline
+whisperspeech
+# Used as a fallback ASR model
+faster-whisper
+
+# YouTube downloader
+yt-dlp
+
+# Configuration file parsing
+PyYAML
+
+# Progress bars
+tqdm
+
+# For audio processing
+torchaudio

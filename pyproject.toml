@@ -12,8 +12,16 @@ extensions = [
 ]
 
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
+
+# Configuration setuptools pour éviter la confusion des packages
+[tool.setuptools]
+py-modules = ["main", "quick_start", "validator", "benchmark", "monitor"]
+
+[tool.setuptools.packages.find]
+include = ["utils*", "tests*"]
+exclude = ["config*", "metrics*", "services*"]
 
 [project]
 name = "voxtral-b200"
@@ -23,16 +31,15 @@ authors = [
     {name = "Voxtral Team", email = "voxtral@example.com"}
 ]
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.9"
 keywords = ["audio", "translation", "b200", "pytorch", "ml"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.10", 
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",

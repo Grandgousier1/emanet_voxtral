@@ -49,6 +49,38 @@ install-minimal: ## Installation dépendances minimales (secours)
 	$(PIP) install -r requirements-minimal.txt
 	$(PIP) install -e .
 
+.PHONY: install-smart
+install-smart: ## Installation intelligente avec fallbacks
+	@echo "$(BLUE)🧠 Installation intelligente...$(NC)"
+	@echo "$(YELLOW)Vérification espace disque...$(NC)"
+	@$(PYTHON) -c "import shutil; free=shutil.disk_usage('.').free/(1024**3); print(f'Espace libre: {free:.1f}GB'); exit(1 if free < 5 else 0)" || (echo "$(RED)❌ Espace disque insuffisant (< 5GB)$(NC)" && $(MAKE) install-ultra-light && exit 0)
+	@echo "$(YELLOW)Tentative 1: Installation complète...$(NC)"
+	@if $(PIP) install -e ".[dev,docs,benchmark]" > /dev/null 2>&1; then \
+		echo "$(GREEN)✅ Installation complète réussie$(NC)"; \
+	else \
+		echo "$(YELLOW)⚠️  Installation complète échouée, tentative requirements.txt...$(NC)"; \
+		if $(PIP) install -r requirements.txt > /dev/null 2>&1; then \
+			echo "$(GREEN)✅ Installation requirements.txt réussie$(NC)"; \
+		else \
+			echo "$(YELLOW)⚠️  Requirements.txt échoué, installation ultra-légère...$(NC)"; \
+			$(MAKE) install-ultra-light; \
+		fi \
+	fi
+
+.PHONY: install-ultra-light
+install-ultra-light: ## Installation ultra-légère (pour espace disque limité)
+	@echo "$(BLUE)💡 Installation ultra-légère...$(NC)"
+	$(PIP) install -r requirements-ultra-light.txt
+	@echo "$(GREEN)✅ Installation ultra-légère terminée$(NC)"
+	@echo "$(YELLOW)ℹ️  PyTorch et Transformers non installés (économie d'espace)$(NC)"
+	@echo "$(YELLOW)ℹ️  Utilisez 'make install-ml' quand plus d'espace disponible$(NC)"
+
+.PHONY: install-ml
+install-ml: ## Ajouter PyTorch et Transformers (après avoir libéré espace)
+	@echo "$(BLUE)🤖 Installation packages ML...$(NC)"
+	$(PIP) install torch>=2.0.0 transformers>=4.36.0 librosa>=0.10.0
+	@echo "$(GREEN)✅ Packages ML installés$(NC)"
+
 .PHONY: install-vllm
 install-vllm: ## Installation vLLM pour B200
 	@echo "$(BLUE)🚀 Installation vLLM pour optimisations B200...$(NC)"
@@ -324,9 +356,29 @@ info: ## Informations environnement
 # =============================================================================
 
 .PHONY: start
-start: ## 🚀 Démarrage guidé interactif (RECOMMANDÉ)
-	@echo "$(BLUE)🚀 EMANET VOXTRAL - Démarrage Guidé$(NC)"
-	@echo "$(YELLOW)Lancement de l'interface utilisateur interactive...$(NC)"
+start: ## 🚀 Démarrage TOUT-EN-UN (installe tout + lance interface)
+	@echo "$(BLUE)🚀 EMANET VOXTRAL - Démarrage TOUT-EN-UN$(NC)"
+	@echo "$(YELLOW)Installation automatique + interface interactive$(NC)"
+	@echo ""
+	@echo "$(BLUE)Étape 1/5: Diagnostic complet...$(NC)"
+	@if $(PYTHON) diagnose_all.py > /dev/null 2>&1; then \
+		echo "$(GREEN)✅ Diagnostic OK - prêt à continuer$(NC)"; \
+	else \
+		echo "$(YELLOW)⚠️  Problèmes détectés - lancement diagnostic détaillé:$(NC)"; \
+		$(PYTHON) diagnose_all.py; \
+		echo "$(YELLOW)Tentative de correction automatique...$(NC)"; \
+	fi
+	@echo ""
+	@echo "$(BLUE)Étape 2/5: Installation dépendances (peut prendre du temps)...$(NC)"
+	@$(MAKE) install-smart || (echo "$(YELLOW)⚠️  Installation classique échouée, essai installation minimale...$(NC)" && $(MAKE) install-minimal)
+	@echo ""
+	@echo "$(BLUE)Étape 3/5: Validation installation...$(NC)"
+	@$(PYTHON) -c "try:\n  import rich, torch, transformers, soundfile\n  print('✅ Dépendances critiques OK')\nexcept Exception as e:\n  print('⚠️  Dépendance manquante:', e)\n  print('💡 Installation en cours...')"
+	@echo ""
+	@echo "$(BLUE)Étape 4/5: Diagnostic final...$(NC)"
+	@$(PYTHON) diagnose_all.py || echo "$(YELLOW)⚠️  Quelques dépendances peuvent encore manquer$(NC)"
+	@echo ""
+	@echo "$(BLUE)Étape 5/5: Lancement interface...$(NC)"
 	@$(PYTHON) quick_start.py
 
 .PHONY: run
@@ -336,6 +388,11 @@ run: start ## Alias pour 'start' - Démarrage guidé
 setup-token: ## 🔑 Configuration interactive du token HuggingFace
 	@echo "$(BLUE)🔑 Configuration Token HuggingFace$(NC)"
 	@$(PYTHON) start_simple.py
+
+.PHONY: diagnose
+diagnose: ## 🔍 Diagnostic complet du projet
+	@echo "$(BLUE)🔍 Diagnostic Complet$(NC)"
+	@$(PYTHON) diagnose_all.py
 
 .PHONY: wizard
 wizard: ## 🧙‍♂️ Assistant configuration avancé

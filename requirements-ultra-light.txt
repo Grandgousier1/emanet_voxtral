@@ -1,0 +1,21 @@
+# Dépendances ultra-légères pour tests et développement initial
+# Usage: pip install -r requirements-ultra-light.txt
+
+# UI essentielles
+rich>=13.0.0
+
+# Utilitaires de base
+requests>=2.28.0
+pyyaml>=6.0
+click>=8.0.0
+
+# Audio minimal (plus petit que librosa complète)
+soundfile>=0.12.0
+
+# ML léger (pas PyTorch complet au début)
+numpy>=1.24.0
+
+# Only add heavy ML dependencies after verifying space
+# torch>=2.0.0  # Commented out - too big for initial install
+# transformers>=4.36.0  # Commented out - too big for initial install
+# librosa>=0.10.0  # Commented out - too big for initial install

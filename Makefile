@@ -43,6 +43,12 @@ install-dev: ## Installation dépendances développement
 	@echo "$(BLUE)🛠️ Installation dépendances développement...$(NC)"
 	$(PIP) install -e ".[dev,docs,benchmark]"
 
+.PHONY: install-minimal
+install-minimal: ## Installation dépendances minimales (secours)
+	@echo "$(BLUE)⚡ Installation dépendances minimales...$(NC)"
+	$(PIP) install -r requirements-minimal.txt
+	$(PIP) install -e .
+
 .PHONY: install-vllm
 install-vllm: ## Installation vLLM pour B200
 	@echo "$(BLUE)🚀 Installation vLLM pour optimisations B200...$(NC)"
@@ -191,12 +197,9 @@ check-vram: ## Vérifie l'empreinte VRAM d'un modèle (par défaut Llama-3-8B)
 	@echo "$(BLUE)🧠 Vérification VRAM pour le modèle: $(MODEL_ID)...$(NC)"
 	$(PYTHON) check_model_vram.py --model_id $(MODEL_ID)
 
+.PHONY: validate-all-b200
 validate-all-b200: ## Lance TOUTES les validations B200 dans l'ordre via l'orchestrateur
 	@echo "$(BLUE)🚀🚀🚀 Lancement de la suite de validation complète pour B200...$(NC)"
-	$(PYTHON) run_b200_validation.py
-
-test-b200: ## Lance les tests fonctionnels B200 via l'orchestrateur
-	@echo "$(BLUE)🚀 Lancement des tests B200 via l'orchestrateur...$(NC)"
 	$(PYTHON) run_b200_validation.py
 
 .PHONY: validate-b200

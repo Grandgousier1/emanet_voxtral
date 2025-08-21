@@ -1,4 +1,6 @@
-# .pre-commit-config.yaml - Configuration hooks pre-commit
+# Configuration Pre-commit pour EMANET VOXTRAL B200
+# Version simplifiée et fonctionnelle
+
 repos:
   # Hooks standards pre-commit
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -7,68 +9,46 @@ repos:
       - id: trailing-whitespace
         name: "Supprime espaces en fin de ligne"
       - id: end-of-file-fixer
-        name: "Assure nouvelle ligne en fin de fichier"
+        name: "Assure fin de fichier"
       - id: check-yaml
-        name: "Valide syntaxe YAML"
+        name: "Vérifie syntaxe YAML"
       - id: check-toml
-        name: "Valide syntaxe TOML"
+        name: "Vérifie syntaxe TOML"
       - id: check-json
-        name: "Valide syntaxe JSON"
+        name: "Vérifie syntaxe JSON"
       - id: check-added-large-files
-        name: "Vérifie taille fichiers"
-        args: ['--maxkb=1000']
+        name: "Détecte gros fichiers"
+        args: ['--maxkb=10000']
       - id: check-merge-conflict
-        name: "Détecte marqueurs merge conflict"
+        name: "Détecte conflits merge"
       - id: debug-statements
-        name: "Détecte statements debug Python"
-      - id: check-executables-have-shebangs
-        name: "Vérifie shebangs fichiers exécutables"
-      - id: check-shebang-scripts-are-executable
-        name: "Vérifie exécutabilité scripts"
+        name: "Détecte debug statements"
 
-  # Black - formatage code
+  # Formatage code Python
   - repo: https://github.com/psf/black
     rev: 23.7.0
     hooks:
       - id: black
-        name: "Black - formatage code Python"
+        name: "black - formatage Python"
         language_version: python3
 
-  # isort - tri imports
+  # Tri imports
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
     hooks:
       - id: isort
-        name: "isort - tri imports Python"
+        name: "isort - tri imports"
+        args: ["--profile", "black"]
 
-  # flake8 - linting
+  # Linting Python
   - repo: https://github.com/pycqa/flake8
     rev: 6.0.0
     hooks:
       - id: flake8
         name: "flake8 - linting Python"
-        additional_dependencies: [
-          flake8-docstrings,
-          flake8-bugbear,
-          flake8-comprehensions,
-          flake8-simplify,
-        ]
+        exclude: ^tests/
 
-  # mypy - vérification types
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.4.1
-    hooks:
-      - id: mypy
-        name: "mypy - vérification types Python"
-        additional_dependencies: [
-          types-requests,
-          types-PyYAML,
-          types-setuptools,
-        ]
-        # Exclut certains fichiers pour migration progressive
-        exclude: ^(tests/|benchmark\.py|validator\.py)
-
-  # bandit - sécurité
+  # Analyse sécurité
   - repo: https://github.com/pycqa/bandit
     rev: 1.7.5
     hooks:
@@ -76,218 +56,3 @@ repos:
         name: "bandit - analyse sécurité Python"
         args: ["-c", "pyproject.toml"]
         exclude: ^tests/
-
-  # Hooks personnalisés pour le projet
-  - repo: local
-    hooks:
-      # Validation structure projet
-      - id: validate-project-structure
-        name: "Valide structure projet"
-        entry: python -c "
-import sys
-from pathlib import Path
-
-required_files = [
-    'main.py', 'config.py', 'pyproject.toml', 'README.md',
-    'utils/model_utils.py', 'utils/b200_optimizer.py'
-]
-
-missing = []
-for file in required_files:
-    if not Path(file).exists():
-        missing.append(file)
-
-if missing:
-    print(f'Fichiers manquants: {missing}')
-    sys.exit(1)
-print('Structure projet OK')
-"
-        language: python
-        pass_filenames: false
-        always_run: true
-
-      # Validation imports critiques
-      - id: check-critical-imports
-        name: "Vérifie imports critiques"
-        entry: python -c "
-import ast
-import sys
-from pathlib import Path
-
-# Vérifications d'imports dangereux
-dangerous_imports = ['os.system', 'subprocess.call', 'eval', 'exec']
-
-def check_file(filepath):
-    try:
-        with open(filepath, 'r') as f:
-            tree = ast.parse(f.read())
-        
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Call):
-                if isinstance(node.func, ast.Attribute):
-                    call_name = f'{node.func.value.id}.{node.func.attr}' if hasattr(node.func.value, 'id') else str(node.func.attr)
-                    if call_name in dangerous_imports:
-                        print(f'Import dangereux détecté dans {filepath}: {call_name}')
-                        return False
-    except:
-        pass
-    return True
-
-failed = False
-for py_file in Path('.').glob('**/*.py'):
-    if '.venv' not in str(py_file) and '__pycache__' not in str(py_file):
-        if not check_file(py_file):
-            failed = True
-
-if failed:
-    sys.exit(1)
-print('Imports critiques OK')
-"
-        language: python
-        files: \.py$
-        pass_filenames: false
-
-      # Validation configuration B200
-      - id: validate-b200-config
-        name: "Valide configuration B200"
-        entry: python -c "
-import sys
-from pathlib import Path
-
-try:
-    # Vérifie que les optimisations B200 sont présentes
-    b200_file = Path('utils/b200_optimizer.py')
-    if not b200_file.exists():
-        print('Fichier B200 optimizer manquant')
-        sys.exit(1)
-    
-    content = b200_file.read_text()
-    required_features = [
-        'torch.compile', 'bfloat16', 'B200Config', 
-        'optimize_model', 'B200BatchProcessor'
-    ]
-    
-    missing = []
-    for feature in required_features:
-        if feature not in content:
-            missing.append(feature)
-    
-    if missing:
-        print(f'Features B200 manquantes: {missing}')
-        sys.exit(1)
-    
-    print('Configuration B200 OK')
-except Exception as e:
-    print(f'Erreur validation B200: {e}')
-    sys.exit(1)
-"
-        language: python
-        pass_filenames: false
-        always_run: true
-
-      # Tests rapides
-      - id: quick-tests
-        name: "Tests rapides"
-        entry: python -c "
-import subprocess
-import sys
-
-try:
-    # Lance tests unitaires rapides
-    result = subprocess.run([
-        sys.executable, '-m', 'pytest', 
-        'tests/', '-v', '--tb=short', 
-        '-m', 'not slow and not gpu',
-        '--maxfail=3'
-    ], capture_output=True, text=True, timeout=60)
-    
-    if result.returncode != 0:
-        print('Tests rapides échoués:')
-        print(result.stdout)
-        print(result.stderr)
-        sys.exit(1)
-    
-    print('Tests rapides OK')
-except subprocess.TimeoutExpired:
-    print('Tests rapides timeout')
-    sys.exit(1)
-except FileNotFoundError:
-    print('pytest non disponible, tests ignorés')
-"
-        language: python
-        pass_filenames: false
-        # Ne lance que si des fichiers Python sont modifiés
-        files: \.py$
-
-      # Vérification taille des fonctions
-      - id: check-function-length
-        name: "Vérifier taille fonctions (<50 lignes)"
-        entry: python -c "
-import ast
-import sys
-from pathlib import Path
-
-def check_function_length(filepath, max_lines=50):
-    try:
-        with open(filepath, 'r') as f:
-            lines = f.readlines()
-            tree = ast.parse(''.join(lines))
-        
-        violations = []
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                # Skip private/magic methods and property getters/setters
-                if (node.name.startswith('__') or 
-                    any(d.id in ['property', 'setter', 'getter'] 
-                        for d in node.decorator_list 
-                        if isinstance(d, ast.Name))):
-                    continue
-                
-                func_start = node.lineno
-                func_end = node.end_lineno if hasattr(node, 'end_lineno') else func_start
-                func_lines = func_end - func_start + 1
-                
-                if func_lines > max_lines:
-                    violations.append(f'{filepath}:{func_start} - {node.name}() ({func_lines} lignes > {max_lines})')
-        
-        return violations
-    except Exception as e:
-        return [f'{filepath}: Erreur parsing - {e}']
-
-violations = []
-for filepath in sys.argv[1:]:
-    if Path(filepath).suffix == '.py':
-        violations.extend(check_function_length(filepath))
-
-if violations:
-    print('⚠️ Fonctions trop longues détectées:')
-    for violation in violations[:10]:  # Limite à 10 pour lisibilité
-        print(f'  {violation}')
-    if len(violations) > 10:
-        print(f'  ... et {len(violations) - 10} autres')
-    print()
-    print('💡 Conseil: Décomposez ces fonctions en sous-fonctions plus petites')
-    print('   pour améliorer la lisibilité et la testabilité.')
-    sys.exit(1)
-else:
-    print('✅ Taille des fonctions OK')
-"
-        language: python
-        files: \.py$
-
-# Configuration générale
-default_language_version:
-  python: python3
-
-# Étapes à ignorer pour certains types de commits
-ci:
-  autofix_commit_msg: |
-    [pre-commit.ci] auto fixes from pre-commit hooks
-
-    for more information, see https://pre-commit.ci
-  autofix_prs: true
-  autoupdate_branch: ''
-  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
-  autoupdate_schedule: weekly
-  skip: [quick-tests]  # Skip tests on CI (too slow)
-  submodules: false

@@ -1,0 +1,23 @@
+# Dépendances principales pour EMANET VOXTRAL B200
+# Installation: pip install -r requirements.txt
+
+# Core ML dependencies
+torch>=2.0.0
+transformers>=4.36.0
+numpy>=1.24.0
+
+# Audio processing (essential)
+soundfile>=0.12.0
+librosa>=0.10.0
+
+# UI and CLI
+rich>=13.0.0
+click>=8.0.0
+
+# Utilities
+requests>=2.28.0
+pyyaml>=6.0
+packaging>=23.0
+
+# For full installation with development tools:
+# pip install -e ".[dev,docs,benchmark]"

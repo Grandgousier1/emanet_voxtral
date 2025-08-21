@@ -30,6 +30,17 @@ def check_environment():
     if not get_hf_token_simple():
         issues.append("Token Hugging Face manquant")
     
+    # Check critical audio dependencies
+    try:
+        import soundfile
+    except ImportError:
+        issues.append("soundfile manquant (requis pour audio) - Installez: make install-dev")
+    
+    try:
+        import librosa
+    except ImportError:
+        issues.append("librosa manquant (requis pour audio) - Installez: make install-dev")
+    
     # Check disk space
     try:
         import shutil

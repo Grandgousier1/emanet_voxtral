@@ -43,7 +43,7 @@ ERROR_MESSAGES = {
     ),
     "PREFLIGHT_CHECKS_FAILED": (
         "Preflight checks failed - execution aborted.",
-        Fix errors above or use --force to override (not recommended)
+        "Fix errors above or use --force to override (not recommended)"
     ),
     "GENERIC_PROCESSING_ERROR": (
         "Error processing segment {segment_index}",

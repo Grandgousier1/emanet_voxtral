@@ -97,6 +97,27 @@ def main():
     print(f"\nPython: {sys.version}")
     print(f"Répertoire: {Path.cwd()}")
     
+    # Vérifier les dépendances critiques
+    missing_deps = []
+    try:
+        import soundfile
+        print("✅ soundfile disponible")
+    except ImportError:
+        missing_deps.append("soundfile")
+        print("❌ soundfile manquant")
+    
+    try:
+        import librosa  
+        print("✅ librosa disponible")
+    except ImportError:
+        missing_deps.append("librosa")
+        print("❌ librosa manquant")
+    
+    if missing_deps:
+        print(f"\n⚠️  Dépendances manquantes: {', '.join(missing_deps)}")
+        print("💡 Installez avec: make install-dev")
+        print("🚀 Ou minimal: make install-minimal")
+    
     # Vérifier le token
     if check_token():
         print("\n✅ Token HuggingFace déjà configuré !")

@@ -53,7 +53,7 @@ try:
     SOUNDFILE_AVAILABLE = True
 except ImportError:
     SOUNDFILE_AVAILABLE = False
-    logger.warning("soundfile not available, audio processing will be limited")
+    logger.warning("soundfile not available - install with: pip install soundfile>=0.12.0")
 
 # Local imports - constants and domain models (always required)
 from constants import CACHE_DB, CHANNELS, SAMPLE_RATE, VOXTRAL_MINI, VOXTRAL_SMALL

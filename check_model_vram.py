@@ -1,4 +1,6 @@
 
+#!/usr/bin/env python3
+"""
 Outil de vérification de l'empreinte VRAM d'un modèle.
 
 Ce script charge un modèle Hugging Face spécifié, le déplace sur le GPU
@@ -6,6 +8,7 @@ et mesure la mémoire VRAM allouée. C'est une étape de validation cruciale
 pour s'assurer qu'un modèle peut être chargé avant de lancer une application complète.
 
 Usage: python check_model_vram.py --model_id <ID_du_modèle_huggingface>
+"""
 import torch
 import argparse
 import sys

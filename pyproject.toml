@@ -230,44 +230,4 @@ skips = ["B101", "B601"]  # assert_used, shell_injection (tests)
 [tool.bandit.assert_used]
 skips = ["*/test_*.py", "*/tests.py"]
 
-# Configuration pre-commit hooks
-[tool.pre-commit]
-repos = [
-    {
-        repo = "https://github.com/pre-commit/pre-commit-hooks",
-        rev = "v4.4.0",
-        hooks = [
-            "trailing-whitespace",
-            "end-of-file-fixer",
-            "check-yaml",
-            "check-added-large-files",
-            "check-merge-conflict",
-            "debug-statements",
-        ]
-    },
-    {
-        repo = "https://github.com/psf/black",
-        rev = "23.7.0",
-        hooks = ["black"]
-    },
-    {
-        repo = "https://github.com/pycqa/isort",
-        rev = "5.12.0",
-        hooks = ["isort"]
-    },
-    {
-        repo = "https://github.com/pycqa/flake8",
-        rev = "6.0.0",
-        hooks = ["flake8"]
-    },
-    {
-        repo = "https://github.com/pre-commit/mirrors-mypy",
-        rev = "v1.4.1",
-        hooks = ["mypy", additional_dependencies = ["types-all"]]
-    },
-    {
-        repo = "https://github.com/pycqa/bandit",
-        rev = "1.7.5",
-        hooks = ["bandit", args = ["-c", "pyproject.toml"]]
-    }
-]
+# Pre-commit configuration is in .pre-commit-config.yaml file

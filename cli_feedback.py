@@ -120,6 +120,29 @@ class CLIFeedback:
             console=console
         )
 
+class ErrorHandler:
+    """Error handler that wraps CLIFeedback for structured error management."""
+    
+    def __init__(self, feedback: CLIFeedback):
+        self.feedback = feedback
+    
+    def handle_error(self, error: Exception, context: str = "", suggestion: str = ""):
+        """Handle and display error with structured feedback."""
+        error_msg = str(error)
+        what = f"{context}: {error_msg}" if context else error_msg
+        why = f"Type d'erreur: {type(error).__name__}"
+        how = suggestion if suggestion else "Vérifiez les logs pour plus de détails"
+        
+        self.feedback.display_error_panel(what, why, how)
+    
+    def handle_import_error(self, module_name: str, error: ImportError):
+        """Handle import errors specifically."""
+        what = f"Impossible d'importer le module: {module_name}"
+        why = f"Module manquant ou incorrectement installé: {error}"
+        how = f"Installez le module avec: pip install {module_name}"
+        
+        self.feedback.display_error_panel(what, why, how)
+
 # Global feedback instance management
 _global_feedback = None
 

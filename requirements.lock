@@ -1,0 +1,50 @@
+# Pinned dependencies for reproducibility
+# Generated from `pip freeze` on 2025-08-16
+
+# Core dependencies - Compatible with RunPod PyTorch 2.8.0
+# torch is pre-installed in the RunPod environment. Do not reinstall.
+transformers==4.54.0
+vllm>=0.6.0,<0.8.0
+mistral-common==1.8.1
+
+# Audio processing
+soundfile==0.12.1
+librosa==0.10.2
+silero-vad==4.0.0
+
+# Video/Audio download and conversion
+yt-dlp==2025.6.30
+ffmpeg-python==0.2.0
+
+# Anti-bot protection for YouTube downloads
+fake-useragent==1.4.0
+requests==2.32.4 # Covers requests[socks]
+
+# GPU monitoring and utilities
+pynvml==11.5.0
+nvidia-ml-py3==11.5.0
+
+# UI and progress
+rich==13.7.1
+tqdm==4.67.1
+
+# Fallback ASR (if Voxtral fails)
+faster-whisper==0.12.0
+
+# Utilities
+python-dotenv==1.1.1
+sqlalchemy==2.0.31
+
+# Authentication and security
+keyring==24.2.0
+cryptography==42.0.0
+
+# Audio processing robustness
+resampy==0.4.2
+audioread==3.0.1
+
+# Optional NLP tools
+nltk==3.8.1
+sacrebleu==2.4.2
+sacremoses==0.1.1
+sentencepiece==0.2.0

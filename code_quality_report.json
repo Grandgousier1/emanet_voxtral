@@ -1,0 +1,1360 @@
+{
+  "project_metrics": {
+    "total_lines_of_code": 8248,
+    "total_functions": 333,
+    "total_classes": 55,
+    "total_complexity": 1413,
+    "average_maintainability_index": 8.820980721765892,
+    "average_documentation_coverage": 14.837427748819891,
+    "most_complex_files": [
+      [
+        "validator.py",
+        129
+      ],
+      [
+        "parallel_processor.py",
+        85
+      ],
+      [
+        "code_quality_analyzer.py",
+        75
+      ],
+      [
+        "utils/b200_optimizer.py",
+        74
+      ],
+      [
+        "utils/model_utils.py",
+        70
+      ]
+    ],
+    "largest_files": [
+      [
+        "validator.py",
+        591
+      ],
+      [
+        "parallel_processor.py",
+        503
+      ],
+      [
+        "code_quality_analyzer.py",
+        423
+      ],
+      [
+        "tests/test_end_to_end.py",
+        390
+      ],
+      [
+        "cli_feedback.py",
+        366
+      ]
+    ],
+    "files_with_issues": 20
+  },
+  "duplications": {
+    "Duplicate function: main()": [
+      "validator.py",
+      "main.py",
+      "benchmark.py",
+      "code_quality_analyzer.py"
+    ],
+    "Duplicate function: __init__(self)": [
+      "validator.py",
+      "parallel_processor.py",
+      "parallel_processor.py",
+      "code_quality_analyzer.py",
+      "code_quality_analyzer.py",
+      "utils/translation_quality.py",
+      "utils/performance_profiler.py"
+    ],
+    "Duplicate function: detect_hardware()": [
+      "config.py",
+      "tests/test_end_to_end.py"
+    ],
+    "Duplicate function: __init__(self, feedback)": [
+      "cli_feedback.py",
+      "utils/security_utils.py",
+      "utils/error_messages.py",
+      "utils/memory_manager.py",
+      "utils/model_utils.py"
+    ],
+    "Duplicate function: get_stats(self)": [
+      "utils/audio_cache.py",
+      "utils/memory_manager.py"
+    ],
+    "Duplicate function: wrapper()": [
+      "utils/b200_optimizer.py",
+      "utils/performance_profiler.py"
+    ],
+    "Duplicate function: setUp(self)": [
+      "tests/test_ml_validation.py",
+      "tests/test_ml_validation.py",
+      "tests/test_edge_cases.py",
+      "tests/test_integration_modules.py",
+      "tests/test_integration_modules.py",
+      "tests/test_end_to_end.py",
+      "tests/test_end_to_end.py"
+    ],
+    "Duplicate function: tearDown(self)": [
+      "tests/test_integration_modules.py",
+      "tests/test_integration_modules.py",
+      "tests/test_end_to_end.py",
+      "tests/test_end_to_end.py"
+    ],
+    "Duplicate code block (hash: 1697)": [
+      "validator.py",
+      "validator.py"
+    ],
+    "Duplicate code block (hash: 2835)": [
+      "main.py",
+      "utils/processing_utils.py"
+    ],
+    "Duplicate code block (hash: 7365)": [
+      "main.py",
+      "parallel_processor.py",
+      "utils/processing_utils.py",
+      "utils/audio_utils.py"
+    ],
+    "Duplicate code block (hash: 2323)": [
+      "benchmark.py",
+      "benchmark.py",
+      "utils/performance_profiler.py",
+      "utils/performance_profiler.py"
+    ],
+    "Duplicate code block (hash: 532)": [
+      "benchmark.py",
+      "tests/test_edge_cases.py"
+    ],
+    "Duplicate code block (hash: 2310)": [
+      "utils/audio_cache.py",
+      "utils/audio_cache.py"
+    ],
+    "Duplicate code block (hash: 4960)": [
+      "utils/audio_cache.py",
+      "utils/audio_cache.py"
+    ],
+    "Duplicate code block (hash: 8645)": [
+      "utils/audio_utils.py",
+      "utils/audio_utils.py"
+    ],
+    "Duplicate code block (hash: 626)": [
+      "utils/reproducibility.py",
+      "utils/model_utils.py",
+      "utils/model_utils.py",
+      "utils/model_utils.py"
+    ],
+    "Duplicate code block (hash: 6395)": [
+      "utils/reproducibility.py",
+      "utils/model_utils.py",
+      "utils/model_utils.py",
+      "utils/model_utils.py"
+    ],
+    "Duplicate code block (hash: 3744)": [
+      "utils/b200_optimizer.py",
+      "utils/model_utils.py"
+    ],
+    "Duplicate code block (hash: 3847)": [
+      "utils/model_utils.py",
+      "tests/test_edge_cases.py"
+    ],
+    "Duplicate code block (hash: 4717)": [
+      "tests/test_ml_validation.py",
+      "tests/test_edge_cases.py",
+      "tests/test_integration_modules.py",
+      "tests/test_end_to_end.py"
+    ],
+    "Duplicate code block (hash: 5952)": [
+      "tests/test_edge_cases.py",
+      "tests/test_integration_modules.py"
+    ],
+    "Duplicate code block (hash: 2630)": [
+      "tests/test_integration_modules.py",
+      "tests/test_end_to_end.py",
+      "tests/test_end_to_end.py"
+    ]
+  },
+  "recommendations": [
+    {
+      "type": "complexity",
+      "severity": "high",
+      "file": "validator.py",
+      "description": "High cyclomatic complexity (129)",
+      "recommendation": "Consider breaking down complex functions into smaller, focused functions"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "validator.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "test_improvements.py",
+      "description": "Low maintainability index (19.9)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "test_parallel_processor.py",
+      "description": "Low maintainability index (44.7)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "config.py",
+      "description": "Low maintainability index (0.5)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "complexity",
+      "severity": "high",
+      "file": "monitor.py",
+      "description": "High cyclomatic complexity (56)",
+      "recommendation": "Consider breaking down complex functions into smaller, focused functions"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "monitor.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "complexity",
+      "severity": "high",
+      "file": "cli_feedback.py",
+      "description": "High cyclomatic complexity (64)",
+      "recommendation": "Consider breaking down complex functions into smaller, focused functions"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "cli_feedback.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "test_timing_sync.py",
+      "description": "Low maintainability index (0.2)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "test_main.py",
+      "description": "Low maintainability index (38.8)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "test_complete.py",
+      "description": "Low maintainability index (12.2)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "constants.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "main.py",
+      "description": "Low maintainability index (1.1)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "voxtral_prompts.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "complexity",
+      "severity": "high",
+      "file": "parallel_processor.py",
+      "description": "High cyclomatic complexity (85)",
+      "recommendation": "Consider breaking down complex functions into smaller, focused functions"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "parallel_processor.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "benchmark.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "complexity",
+      "severity": "high",
+      "file": "code_quality_analyzer.py",
+      "description": "High cyclomatic complexity (75)",
+      "recommendation": "Consider breaking down complex functions into smaller, focused functions"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "code_quality_analyzer.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/gpu_utils.py",
+      "description": "Low maintainability index (49.9)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/security_utils.py",
+      "description": "Low maintainability index (19.7)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/antibot_utils.py",
+      "description": "Low maintainability index (13.1)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/audio_cache.py",
+      "description": "Low maintainability index (0.5)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/srt_utils.py",
+      "description": "Low maintainability index (24.3)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "complexity",
+      "severity": "high",
+      "file": "utils/processing_utils.py",
+      "description": "High cyclomatic complexity (69)",
+      "recommendation": "Consider breaking down complex functions into smaller, focused functions"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/processing_utils.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/validation_utils.py",
+      "description": "Low maintainability index (36.5)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/error_messages.py",
+      "description": "Low maintainability index (23.4)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/memory_manager.py",
+      "description": "Low maintainability index (5.9)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/tensor_validation.py",
+      "description": "Low maintainability index (7.5)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "complexity",
+      "severity": "high",
+      "file": "utils/audio_utils.py",
+      "description": "High cyclomatic complexity (53)",
+      "recommendation": "Consider breaking down complex functions into smaller, focused functions"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/audio_utils.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/reproducibility.py",
+      "description": "Low maintainability index (9.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/translation_quality.py",
+      "description": "Low maintainability index (1.2)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "complexity",
+      "severity": "high",
+      "file": "utils/b200_optimizer.py",
+      "description": "High cyclomatic complexity (74)",
+      "recommendation": "Consider breaking down complex functions into smaller, focused functions"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/b200_optimizer.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "complexity",
+      "severity": "high",
+      "file": "utils/model_utils.py",
+      "description": "High cyclomatic complexity (70)",
+      "recommendation": "Consider breaking down complex functions into smaller, focused functions"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/model_utils.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "complexity",
+      "severity": "high",
+      "file": "utils/performance_profiler.py",
+      "description": "High cyclomatic complexity (61)",
+      "recommendation": "Consider breaking down complex functions into smaller, focused functions"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "utils/performance_profiler.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "tests/test_ml_validation.py",
+      "description": "Low maintainability index (0.4)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "tests/test_edge_cases.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "tests/test_integration_modules.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "complexity",
+      "severity": "high",
+      "file": "tests/test_end_to_end.py",
+      "description": "High cyclomatic complexity (51)",
+      "recommendation": "Consider breaking down complex functions into smaller, focused functions"
+    },
+    {
+      "type": "maintainability",
+      "severity": "high",
+      "file": "tests/test_end_to_end.py",
+      "description": "Low maintainability index (0.0)",
+      "recommendation": "Refactor to reduce complexity and improve code structure"
+    },
+    {
+      "type": "documentation",
+      "severity": "medium",
+      "file": "test_timing_sync.py",
+      "description": "Low documentation coverage (9.5%)",
+      "recommendation": "Add docstrings and comments to improve code documentation"
+    },
+    {
+      "type": "documentation",
+      "severity": "medium",
+      "file": "main.py",
+      "description": "Low documentation coverage (8.3%)",
+      "recommendation": "Add docstrings and comments to improve code documentation"
+    },
+    {
+      "type": "documentation",
+      "severity": "medium",
+      "file": "voxtral_prompts.py",
+      "description": "Low documentation coverage (0.0%)",
+      "recommendation": "Add docstrings and comments to improve code documentation"
+    },
+    {
+      "type": "function_length",
+      "severity": "medium",
+      "file": "parallel_processor.py",
+      "description": "Very long function (178 lines)",
+      "recommendation": "Break down large functions into smaller, more manageable pieces"
+    },
+    {
+      "type": "documentation",
+      "severity": "medium",
+      "file": "benchmark.py",
+      "description": "Low documentation coverage (8.3%)",
+      "recommendation": "Add docstrings and comments to improve code documentation"
+    },
+    {
+      "type": "documentation",
+      "severity": "medium",
+      "file": "utils/gpu_utils.py",
+      "description": "Low documentation coverage (5.0%)",
+      "recommendation": "Add docstrings and comments to improve code documentation"
+    },
+    {
+      "type": "function_length",
+      "severity": "medium",
+      "file": "utils/processing_utils.py",
+      "description": "Very long function (138 lines)",
+      "recommendation": "Break down large functions into smaller, more manageable pieces"
+    },
+    {
+      "type": "documentation",
+      "severity": "medium",
+      "file": "utils/error_messages.py",
+      "description": "Low documentation coverage (8.7%)",
+      "recommendation": "Add docstrings and comments to improve code documentation"
+    },
+    {
+      "type": "documentation",
+      "severity": "medium",
+      "file": "utils/tensor_validation.py",
+      "description": "Low documentation coverage (8.8%)",
+      "recommendation": "Add docstrings and comments to improve code documentation"
+    },
+    {
+      "type": "function_length",
+      "severity": "medium",
+      "file": "utils/audio_utils.py",
+      "description": "Very long function (159 lines)",
+      "recommendation": "Break down large functions into smaller, more manageable pieces"
+    },
+    {
+      "type": "documentation",
+      "severity": "medium",
+      "file": "utils/audio_utils.py",
+      "description": "Low documentation coverage (9.6%)",
+      "recommendation": "Add docstrings and comments to improve code documentation"
+    },
+    {
+      "type": "function_length",
+      "severity": "medium",
+      "file": "utils/model_utils.py",
+      "description": "Very long function (152 lines)",
+      "recommendation": "Break down large functions into smaller, more manageable pieces"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "validator.py",
+        "main.py",
+        "benchmark.py",
+        "code_quality_analyzer.py"
+      ],
+      "description": "Duplicate function: main()",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "validator.py",
+        "parallel_processor.py",
+        "parallel_processor.py",
+        "code_quality_analyzer.py",
+        "code_quality_analyzer.py",
+        "utils/translation_quality.py",
+        "utils/performance_profiler.py"
+      ],
+      "description": "Duplicate function: __init__(self)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "config.py",
+        "tests/test_end_to_end.py"
+      ],
+      "description": "Duplicate function: detect_hardware()",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "cli_feedback.py",
+        "utils/security_utils.py",
+        "utils/error_messages.py",
+        "utils/memory_manager.py",
+        "utils/model_utils.py"
+      ],
+      "description": "Duplicate function: __init__(self, feedback)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "utils/audio_cache.py",
+        "utils/memory_manager.py"
+      ],
+      "description": "Duplicate function: get_stats(self)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "utils/b200_optimizer.py",
+        "utils/performance_profiler.py"
+      ],
+      "description": "Duplicate function: wrapper()",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "tests/test_ml_validation.py",
+        "tests/test_ml_validation.py",
+        "tests/test_edge_cases.py",
+        "tests/test_integration_modules.py",
+        "tests/test_integration_modules.py",
+        "tests/test_end_to_end.py",
+        "tests/test_end_to_end.py"
+      ],
+      "description": "Duplicate function: setUp(self)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "tests/test_integration_modules.py",
+        "tests/test_integration_modules.py",
+        "tests/test_end_to_end.py",
+        "tests/test_end_to_end.py"
+      ],
+      "description": "Duplicate function: tearDown(self)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "validator.py",
+        "validator.py"
+      ],
+      "description": "Duplicate code block (hash: 1697)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "main.py",
+        "utils/processing_utils.py"
+      ],
+      "description": "Duplicate code block (hash: 2835)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "main.py",
+        "parallel_processor.py",
+        "utils/processing_utils.py",
+        "utils/audio_utils.py"
+      ],
+      "description": "Duplicate code block (hash: 7365)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "benchmark.py",
+        "benchmark.py",
+        "utils/performance_profiler.py",
+        "utils/performance_profiler.py"
+      ],
+      "description": "Duplicate code block (hash: 2323)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "benchmark.py",
+        "tests/test_edge_cases.py"
+      ],
+      "description": "Duplicate code block (hash: 532)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "utils/audio_cache.py",
+        "utils/audio_cache.py"
+      ],
+      "description": "Duplicate code block (hash: 2310)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "utils/audio_cache.py",
+        "utils/audio_cache.py"
+      ],
+      "description": "Duplicate code block (hash: 4960)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "utils/audio_utils.py",
+        "utils/audio_utils.py"
+      ],
+      "description": "Duplicate code block (hash: 8645)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "utils/reproducibility.py",
+        "utils/model_utils.py",
+        "utils/model_utils.py",
+        "utils/model_utils.py"
+      ],
+      "description": "Duplicate code block (hash: 626)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "utils/reproducibility.py",
+        "utils/model_utils.py",
+        "utils/model_utils.py",
+        "utils/model_utils.py"
+      ],
+      "description": "Duplicate code block (hash: 6395)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "utils/b200_optimizer.py",
+        "utils/model_utils.py"
+      ],
+      "description": "Duplicate code block (hash: 3744)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "utils/model_utils.py",
+        "tests/test_edge_cases.py"
+      ],
+      "description": "Duplicate code block (hash: 3847)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "tests/test_ml_validation.py",
+        "tests/test_edge_cases.py",
+        "tests/test_integration_modules.py",
+        "tests/test_end_to_end.py"
+      ],
+      "description": "Duplicate code block (hash: 4717)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "tests/test_edge_cases.py",
+        "tests/test_integration_modules.py"
+      ],
+      "description": "Duplicate code block (hash: 5952)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    },
+    {
+      "type": "duplication",
+      "severity": "medium",
+      "files": [
+        "tests/test_integration_modules.py",
+        "tests/test_end_to_end.py",
+        "tests/test_end_to_end.py"
+      ],
+      "description": "Duplicate code block (hash: 2630)",
+      "recommendation": "Extract common functionality into shared utilities or base classes"
+    }
+  ],
+  "files_analyzed": 35,
+  "file_metrics": {
+    "validator.py": {
+      "lines_of_code": 591,
+      "cyclomatic_complexity": 129,
+      "function_count": 22,
+      "class_count": 2,
+      "max_function_length": 93,
+      "avg_function_length": 31.136363636363637,
+      "imports_count": 24,
+      "documentation_coverage": 11.16751269035533,
+      "maintainability_index": 0,
+      "issues": [
+        "Large class 'CodeValidator' (653 lines)",
+        "Long function 'run_validation' (93 lines)",
+        "Long function '_validate_imports' (65 lines)",
+        "Long function '_validate_config_files' (51 lines)",
+        "High complexity function '_validate_config_files' (complexity: 11)",
+        "Long function '_display_results' (77 lines)",
+        "High complexity function '_display_results' (complexity: 20)"
+      ]
+    },
+    "test_improvements.py": {
+      "lines_of_code": 106,
+      "cyclomatic_complexity": 20,
+      "function_count": 5,
+      "class_count": 0,
+      "max_function_length": 33,
+      "avg_function_length": 23.6,
+      "imports_count": 6,
+      "documentation_coverage": 13.20754716981132,
+      "maintainability_index": 19.85228667538452,
+      "issues": []
+    },
+    "test_parallel_processor.py": {
+      "lines_of_code": 30,
+      "cyclomatic_complexity": 1,
+      "function_count": 1,
+      "class_count": 1,
+      "max_function_length": 25,
+      "avg_function_length": 25.0,
+      "imports_count": 3,
+      "documentation_coverage": 23.333333333333332,
+      "maintainability_index": 44.67060241707308,
+      "issues": []
+    },
+    "config.py": {
+      "lines_of_code": 263,
+      "cyclomatic_complexity": 40,
+      "function_count": 6,
+      "class_count": 0,
+      "max_function_length": 41,
+      "avg_function_length": 28.5,
+      "imports_count": 6,
+      "documentation_coverage": 22.0532319391635,
+      "maintainability_index": 0.5311046787202116,
+      "issues": []
+    },
+    "monitor.py": {
+      "lines_of_code": 319,
+      "cyclomatic_complexity": 56,
+      "function_count": 14,
+      "class_count": 1,
+      "max_function_length": 72,
+      "avg_function_length": 23.785714285714285,
+      "imports_count": 12,
+      "documentation_coverage": 12.225705329153605,
+      "maintainability_index": 0,
+      "issues": [
+        "Large class 'B200Monitor' (349 lines)",
+        "Long function 'get_gpu_stats' (51 lines)",
+        "High complexity function 'get_gpu_stats' (complexity: 12)",
+        "Long function 'create_display_table' (72 lines)"
+      ]
+    },
+    "cli_feedback.py": {
+      "lines_of_code": 366,
+      "cyclomatic_complexity": 64,
+      "function_count": 27,
+      "class_count": 4,
+      "max_function_length": 67,
+      "avg_function_length": 13.777777777777779,
+      "imports_count": 12,
+      "documentation_coverage": 12.295081967213115,
+      "maintainability_index": 0,
+      "issues": [
+        "Large class 'CLIFeedback' (308 lines)",
+        "Long function '_suggest_solution' (67 lines)",
+        "High complexity function 'display_summary' (complexity: 12)"
+      ]
+    },
+    "test_timing_sync.py": {
+      "lines_of_code": 273,
+      "cyclomatic_complexity": 39,
+      "function_count": 4,
+      "class_count": 0,
+      "max_function_length": 97,
+      "avg_function_length": 81.0,
+      "imports_count": 14,
+      "documentation_coverage": 9.523809523809524,
+      "maintainability_index": 0.156556918003659,
+      "issues": [
+        "Long function 'test_ffmpeg_compatibility' (74 lines)",
+        "Long function 'test_subtitle_timing_precision' (97 lines)",
+        "Long function 'test_voxtral_prompts' (89 lines)",
+        "High complexity function 'test_voxtral_prompts' (complexity: 13)",
+        "Long function 'test_complete_pipeline_integration' (64 lines)"
+      ]
+    },
+    "test_main.py": {
+      "lines_of_code": 42,
+      "cyclomatic_complexity": 3,
+      "function_count": 3,
+      "class_count": 1,
+      "max_function_length": 16,
+      "avg_function_length": 13.0,
+      "imports_count": 5,
+      "documentation_coverage": 16.666666666666664,
+      "maintainability_index": 38.75975218380944,
+      "issues": []
+    },
+    "test_complete.py": {
+      "lines_of_code": 161,
+      "cyclomatic_complexity": 24,
+      "function_count": 2,
+      "class_count": 0,
+      "max_function_length": 95,
+      "avg_function_length": 88.5,
+      "imports_count": 17,
+      "documentation_coverage": 11.801242236024844,
+      "maintainability_index": 12.161249287251707,
+      "issues": [
+        "Long function 'test_complete_pipeline' (95 lines)",
+        "High complexity function 'test_complete_pipeline' (complexity: 18)",
+        "Long function 'generate_final_report' (82 lines)"
+      ]
+    },
+    "constants.py": {
+      "lines_of_code": 14,
+      "cyclomatic_complexity": 0,
+      "function_count": 0,
+      "class_count": 0,
+      "max_function_length": 0,
+      "avg_function_length": 0.0,
+      "imports_count": 1,
+      "documentation_coverage": 35.714285714285715,
+      "maintainability_index": 0.0,
+      "issues": []
+    },
+    "main.py": {
+      "lines_of_code": 240,
+      "cyclomatic_complexity": 44,
+      "function_count": 9,
+      "class_count": 1,
+      "max_function_length": 83,
+      "avg_function_length": 21.666666666666668,
+      "imports_count": 34,
+      "documentation_coverage": 8.333333333333332,
+      "maintainability_index": 1.0936494418597391,
+      "issues": [
+        "Long function 'run_processing' (83 lines)",
+        "High complexity function 'run_processing' (complexity: 11)",
+        "Long function 'main' (52 lines)",
+        "High complexity function 'main' (complexity: 17)"
+      ]
+    },
+    "voxtral_prompts.py": {
+      "lines_of_code": 0,
+      "cyclomatic_complexity": 0,
+      "function_count": 0,
+      "class_count": 0,
+      "max_function_length": 0,
+      "avg_function_length": 0.0,
+      "imports_count": 0,
+      "documentation_coverage": 0.0,
+      "maintainability_index": 0.0,
+      "issues": []
+    },
+    "parallel_processor.py": {
+      "lines_of_code": 503,
+      "cyclomatic_complexity": 85,
+      "function_count": 16,
+      "class_count": 5,
+      "max_function_length": 178,
+      "avg_function_length": 27.6875,
+      "imports_count": 19,
+      "documentation_coverage": 16.302186878727635,
+      "maintainability_index": 0,
+      "issues": [
+        "Large class 'B200OptimizedProcessor' (361 lines)",
+        "Long function 'create_optimal_batches' (64 lines)",
+        "High complexity function 'create_optimal_batches' (complexity: 12)",
+        "Long function '_process_batch_b200_optimized' (53 lines)",
+        "Long function '_process_batch_gpu' (178 lines)",
+        "High complexity function '_process_batch_gpu' (complexity: 34)"
+      ]
+    },
+    "benchmark.py": {
+      "lines_of_code": 277,
+      "cyclomatic_complexity": 50,
+      "function_count": 7,
+      "class_count": 0,
+      "max_function_length": 85,
+      "avg_function_length": 41.714285714285715,
+      "imports_count": 15,
+      "documentation_coverage": 8.303249097472925,
+      "maintainability_index": 0,
+      "issues": [
+        "Long function 'benchmark_model_optimizations' (73 lines)",
+        "High complexity function 'benchmark_model_optimizations' (complexity: 16)",
+        "Long function 'display_benchmark_results' (85 lines)",
+        "High complexity function 'display_benchmark_results' (complexity: 17)",
+        "Long function 'main' (73 lines)"
+      ]
+    },
+    "code_quality_analyzer.py": {
+      "lines_of_code": 423,
+      "cyclomatic_complexity": 75,
+      "function_count": 17,
+      "class_count": 5,
+      "max_function_length": 79,
+      "avg_function_length": 25.941176470588236,
+      "imports_count": 13,
+      "documentation_coverage": 14.657210401891252,
+      "maintainability_index": 0,
+      "issues": [
+        "Large class 'CodeQualityAnalyzer' (204 lines)",
+        "Long function 'main' (79 lines)",
+        "High complexity function '_analyze_ast' (complexity: 13)",
+        "Long function '_generate_recommendations' (58 lines)",
+        "Long function 'generate_report' (66 lines)",
+        "High complexity function 'generate_report' (complexity: 11)"
+      ]
+    },
+    "utils/gpu_utils.py": {
+      "lines_of_code": 20,
+      "cyclomatic_complexity": 7,
+      "function_count": 3,
+      "class_count": 0,
+      "max_function_length": 11,
+      "avg_function_length": 5.333333333333333,
+      "imports_count": 2,
+      "documentation_coverage": 5.0,
+      "maintainability_index": 49.85913716842535,
+      "issues": []
+    },
+    "utils/security_utils.py": {
+      "lines_of_code": 101,
+      "cyclomatic_complexity": 24,
+      "function_count": 7,
+      "class_count": 1,
+      "max_function_length": 40,
+      "avg_function_length": 11.714285714285714,
+      "imports_count": 6,
+      "documentation_coverage": 18.81188118811881,
+      "maintainability_index": 19.7150476271716,
+      "issues": [
+        "High complexity function 'run_secure' (complexity: 12)"
+      ]
+    },
+    "utils/antibot_utils.py": {
+      "lines_of_code": 156,
+      "cyclomatic_complexity": 22,
+      "function_count": 7,
+      "class_count": 0,
+      "max_function_length": 35,
+      "avg_function_length": 22.0,
+      "imports_count": 6,
+      "documentation_coverage": 12.82051282051282,
+      "maintainability_index": 13.132332682557504,
+      "issues": []
+    },
+    "utils/audio_cache.py": {
+      "lines_of_code": 235,
+      "cyclomatic_complexity": 48,
+      "function_count": 14,
+      "class_count": 2,
+      "max_function_length": 47,
+      "avg_function_length": 18.428571428571427,
+      "imports_count": 11,
+      "documentation_coverage": 14.468085106382977,
+      "maintainability_index": 0.5147146708646204,
+      "issues": [
+        "Large class 'AudioCache' (235 lines)"
+      ]
+    },
+    "utils/srt_utils.py": {
+      "lines_of_code": 85,
+      "cyclomatic_complexity": 16,
+      "function_count": 2,
+      "class_count": 0,
+      "max_function_length": 86,
+      "avg_function_length": 48.5,
+      "imports_count": 3,
+      "documentation_coverage": 14.117647058823529,
+      "maintainability_index": 24.349049644856862,
+      "issues": [
+        "Long function 'enhanced_generate_srt' (86 lines)",
+        "High complexity function 'enhanced_generate_srt' (complexity: 15)"
+      ]
+    },
+    "utils/processing_utils.py": {
+      "lines_of_code": 344,
+      "cyclomatic_complexity": 69,
+      "function_count": 7,
+      "class_count": 0,
+      "max_function_length": 138,
+      "avg_function_length": 53.0,
+      "imports_count": 22,
+      "documentation_coverage": 12.5,
+      "maintainability_index": 0,
+      "issues": [
+        "Long function 'enhanced_voxtral_process' (138 lines)",
+        "High complexity function 'enhanced_voxtral_process' (complexity: 26)",
+        "Long function 'enhanced_process_batch' (87 lines)",
+        "High complexity function 'enhanced_process_batch' (complexity: 14)"
+      ]
+    },
+    "utils/validation_utils.py": {
+      "lines_of_code": 45,
+      "cyclomatic_complexity": 8,
+      "function_count": 1,
+      "class_count": 0,
+      "max_function_length": 48,
+      "avg_function_length": 48.0,
+      "imports_count": 3,
+      "documentation_coverage": 17.77777777777778,
+      "maintainability_index": 36.492067665720825,
+      "issues": []
+    },
+    "utils/error_messages.py": {
+      "lines_of_code": 104,
+      "cyclomatic_complexity": 6,
+      "function_count": 4,
+      "class_count": 1,
+      "max_function_length": 26,
+      "avg_function_length": 12.75,
+      "imports_count": 2,
+      "documentation_coverage": 8.653846153846153,
+      "maintainability_index": 23.38086743390977,
+      "issues": []
+    },
+    "utils/memory_manager.py": {
+      "lines_of_code": 181,
+      "cyclomatic_complexity": 43,
+      "function_count": 18,
+      "class_count": 2,
+      "max_function_length": 31,
+      "avg_function_length": 9.5,
+      "imports_count": 8,
+      "documentation_coverage": 18.784530386740332,
+      "maintainability_index": 5.894348093493619,
+      "issues": []
+    },
+    "utils/tensor_validation.py": {
+      "lines_of_code": 171,
+      "cyclomatic_complexity": 40,
+      "function_count": 6,
+      "class_count": 0,
+      "max_function_length": 43,
+      "avg_function_length": 32.333333333333336,
+      "imports_count": 3,
+      "documentation_coverage": 8.771929824561402,
+      "maintainability_index": 7.505050384656911,
+      "issues": [
+        "High complexity function 'validate_tensor_shape' (complexity: 11)"
+      ]
+    },
+    "utils/audio_utils.py": {
+      "lines_of_code": 301,
+      "cyclomatic_complexity": 53,
+      "function_count": 3,
+      "class_count": 0,
+      "max_function_length": 159,
+      "avg_function_length": 105.0,
+      "imports_count": 15,
+      "documentation_coverage": 9.634551495016613,
+      "maintainability_index": 0,
+      "issues": [
+        "Long function 'enhanced_download_audio' (150 lines)",
+        "High complexity function 'enhanced_download_audio' (complexity: 19)",
+        "Long function 'enhanced_vad_segments' (159 lines)",
+        "High complexity function 'enhanced_vad_segments' (complexity: 31)"
+      ]
+    },
+    "utils/reproducibility.py": {
+      "lines_of_code": 180,
+      "cyclomatic_complexity": 30,
+      "function_count": 8,
+      "class_count": 1,
+      "max_function_length": 42,
+      "avg_function_length": 24.875,
+      "imports_count": 10,
+      "documentation_coverage": 15.0,
+      "maintainability_index": 8.974099015578588,
+      "issues": []
+    },
+    "utils/translation_quality.py": {
+      "lines_of_code": 278,
+      "cyclomatic_complexity": 33,
+      "function_count": 7,
+      "class_count": 1,
+      "max_function_length": 79,
+      "avg_function_length": 45.0,
+      "imports_count": 5,
+      "documentation_coverage": 11.870503597122301,
+      "maintainability_index": 1.2425379582116847,
+      "issues": [
+        "Large class 'TranslationQualityValidator' (309 lines)",
+        "Long function 'validate_cultural_adaptation' (55 lines)",
+        "Long function 'validate_subtitle_constraints' (54 lines)",
+        "Long function 'comprehensive_quality_assessment' (79 lines)",
+        "High complexity function 'comprehensive_quality_assessment' (complexity: 11)"
+      ]
+    },
+    "utils/b200_optimizer.py": {
+      "lines_of_code": 339,
+      "cyclomatic_complexity": 74,
+      "function_count": 16,
+      "class_count": 3,
+      "max_function_length": 77,
+      "avg_function_length": 25.8125,
+      "imports_count": 7,
+      "documentation_coverage": 15.04424778761062,
+      "maintainability_index": 0,
+      "issues": [
+        "Large class 'B200Optimizer' (239 lines)",
+        "Long function 'optimize_model' (77 lines)",
+        "High complexity function 'optimize_model' (complexity: 15)",
+        "High complexity function 'optimize_tensor' (complexity: 12)",
+        "Long function 'benchmark_operation' (53 lines)",
+        "Long function 'find_optimal_batch_size' (64 lines)"
+      ]
+    },
+    "utils/model_utils.py": {
+      "lines_of_code": 363,
+      "cyclomatic_complexity": 70,
+      "function_count": 9,
+      "class_count": 2,
+      "max_function_length": 152,
+      "avg_function_length": 44.666666666666664,
+      "imports_count": 12,
+      "documentation_coverage": 12.396694214876034,
+      "maintainability_index": 0,
+      "issues": [
+        "Large class 'ModelManager' (217 lines)",
+        "Long function 'get_transformers_generation_params' (82 lines)",
+        "Long function 'load_voxtral_model' (152 lines)",
+        "High complexity function 'load_voxtral_model' (complexity: 26)",
+        "High complexity function '_apply_b200_optimizations' (complexity: 11)"
+      ]
+    },
+    "utils/performance_profiler.py": {
+      "lines_of_code": 362,
+      "cyclomatic_complexity": 61,
+      "function_count": 18,
+      "class_count": 4,
+      "max_function_length": 46,
+      "avg_function_length": 22.055555555555557,
+      "imports_count": 11,
+      "documentation_coverage": 12.430939226519337,
+      "maintainability_index": 0,
+      "issues": [
+        "High complexity function 'benchmark_tensor_operations' (complexity: 11)"
+      ]
+    },
+    "tests/test_ml_validation.py": {
+      "lines_of_code": 309,
+      "cyclomatic_complexity": 29,
+      "function_count": 17,
+      "class_count": 4,
+      "max_function_length": 29,
+      "avg_function_length": 17.823529411764707,
+      "imports_count": 13,
+      "documentation_coverage": 23.948220064724918,
+      "maintainability_index": 0.4498713142565123,
+      "issues": []
+    },
+    "tests/test_edge_cases.py": {
+      "lines_of_code": 333,
+      "cyclomatic_complexity": 50,
+      "function_count": 17,
+      "class_count": 6,
+      "max_function_length": 36,
+      "avg_function_length": 21.0,
+      "imports_count": 21,
+      "documentation_coverage": 26.726726726726728,
+      "maintainability_index": 0,
+      "issues": []
+    },
+    "tests/test_integration_modules.py": {
+      "lines_of_code": 343,
+      "cyclomatic_complexity": 49,
+      "function_count": 19,
+      "class_count": 6,
+      "max_function_length": 47,
+      "avg_function_length": 18.31578947368421,
+      "imports_count": 21,
+      "documentation_coverage": 24.198250728862973,
+      "maintainability_index": 0,
+      "issues": []
+    },
+    "tests/test_end_to_end.py": {
+      "lines_of_code": 390,
+      "cyclomatic_complexity": 51,
+      "function_count": 17,
+      "class_count": 2,
+      "max_function_length": 47,
+      "avg_function_length": 24.0,
+      "imports_count": 28,
+      "documentation_coverage": 20.76923076923077,
+      "maintainability_index": 0,
+      "issues": [
+        "Large class 'TestEndToEndPipeline' (350 lines)"
+      ]
+    }
+  }
+}

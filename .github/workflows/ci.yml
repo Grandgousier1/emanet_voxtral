@@ -1,0 +1,277 @@
+# GitHub Actions CI Pipeline for Voxtral
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Nightly builds at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  PYTHON_VERSION: "3.11"
+  CUDA_VERSION: "12.8"
+
+jobs:
+  # Job 1: Linting and Code Quality
+  lint:
+    name: "🔍 Code Quality & Linting"
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: Install linting dependencies
+      run: |
+        pip install --upgrade pip
+        pip install black isort ruff mypy bandit
+        
+    - name: Run Black formatter check
+      run: black --check --diff .
+      
+    - name: Run isort import sorting check
+      run: isort --check-only --diff .
+      
+    - name: Run Ruff linting
+      run: ruff check . --output-format=github
+      
+    - name: Run MyPy type checking
+      run: mypy . --strict --ignore-missing-imports
+      continue-on-error: true  # Allow type errors for now
+      
+    - name: Run Bandit security analysis
+      run: bandit -r . -f json -o bandit-report.json || true
+      
+    - name: Upload bandit report
+      uses: actions/upload-artifact@v3
+      with:
+        name: bandit-security-report
+        path: bandit-report.json
+
+  # Job 2: Unit Tests
+  test:
+    name: "🧪 Unit Tests"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+        
+    - name: Install test dependencies
+      run: |
+        pip install --upgrade pip
+        pip install pytest pytest-cov pytest-xvfb pytest-mock hypothesis
+        pip install -r requirements.txt
+        
+    - name: Run unit tests
+      run: |
+        pytest tests/ \
+          --cov=. \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-report=term \
+          -v \
+          --tb=short \
+          -m "not slow and not gpu"
+          
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  # Job 3: Integration Tests (with GPU simulation)
+  integration:
+    name: "🔧 Integration Tests"
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: Install dependencies with CPU-only PyTorch
+      run: |
+        pip install --upgrade pip
+        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+        pip install -r requirements.txt
+        
+    - name: Create mock GPU environment
+      run: |
+        export CUDA_VISIBLE_DEVICES=""
+        export DISABLE_GPU=1
+        
+    - name: Run integration tests
+      env:
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        DISABLE_GPU: 1
+      run: |
+        pytest tests/ \
+          -v \
+          --tb=short \
+          -m "integration and not gpu" \
+          --maxfail=3
+          
+    - name: Test CLI commands
+      run: |
+        python main.py --validate-only --dry-run
+        python main.py --setup-auth --help || true
+
+  # Job 4: Security Scanning
+  security:
+    name: "🔒 Security Scanning"
+    runs-on: ubuntu-latest
+    needs: [lint]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # Job 5: Build and Package
+  build:
+    name: "📦 Build & Package"
+    runs-on: ubuntu-latest
+    needs: [test, integration]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install build dependencies
+      run: |
+        pip install --upgrade pip build wheel
+        
+    - name: Build package
+      run: |
+        python -m build
+        
+    - name: Check package
+      run: |
+        pip install twine
+        twine check dist/*
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: dist-packages
+        path: dist/
+
+  # Job 6: Performance Benchmarks
+  benchmark:
+    name: "⚡ Performance Benchmarks"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[benchmark]')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: Install benchmark dependencies
+      run: |
+        pip install --upgrade pip
+        pip install pytest-benchmark
+        pip install -r requirements.txt
+        
+    - name: Run performance benchmarks
+      run: |
+        pytest benchmarks/ \
+          --benchmark-only \
+          --benchmark-json=benchmark-results.json
+          
+    - name: Store benchmark results
+      uses: benchmark-action/github-action-benchmark@v1
+      with:
+        tool: 'pytest'
+        output-file-path: benchmark-results.json
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        auto-push: true
+
+  # Job 7: Documentation Build
+  docs:
+    name: "📚 Documentation"
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install doc dependencies
+      run: |
+        pip install mkdocs mkdocs-material mkdocstrings
+        
+    - name: Build documentation
+      run: |
+        mkdocs build --strict
+        
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      if: github.ref == 'refs/heads/main'
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./site
+
+# Notification en cas d'échec
+notifications:
+  slack:
+    if: failure()
+    uses: 8398a7/action-slack@v3
+    with:
+      status: failure
+      channel: '#dev-alerts'
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

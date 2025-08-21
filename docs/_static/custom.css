@@ -1,0 +1,71 @@
+/* Custom CSS for Voxtral Documentation */
+
+:root {
+  --color-brand-primary: #2563eb;
+  --color-brand-secondary: #1d4ed8;
+}
+
+/* Brand colors */
+.sidebar-brand-text {
+  color: var(--color-brand-primary) !important;
+  font-weight: 700;
+}
+
+/* Code blocks with better B200 highlighting */
+.highlight-python .nv {
+  color: #22c55e; /* Green for variables */
+}
+
+.highlight-python .s {
+  color: #f59e0b; /* Amber for strings */  
+}
+
+/* Performance badges */
+.badge-b200 {
+  background: linear-gradient(45deg, #22c55e, #16a34a);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-performance {
+  background: linear-gradient(45deg, #3b82f6, #2563eb);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Admonition improvements */
+.admonition.tip {
+  border-left-color: var(--color-brand-primary);
+}
+
+.admonition.warning {
+  border-left-color: #f59e0b;
+}
+
+/* Function signature improvements */
+.sig-name {
+  font-weight: 600;
+  color: var(--color-brand-secondary);
+}
+
+/* API reference improvements */
+.py.class .sig-name {
+  color: #dc2626;
+}
+
+.py.method .sig-name {
+  color: var(--color-brand-primary);
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .sidebar-drawer {
+    width: 280px;
+  }
+}

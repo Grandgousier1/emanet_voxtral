@@ -27,7 +27,7 @@ def check_environment():
         issues.append("Python 3.8+ requis")
     
     # Check HF token
-    if not os.getenv('HF_TOKEN') and not os.getenv('HUGGING_FACE_HUB_TOKEN'):
+    if not get_hf_token_simple():
         issues.append("Token Hugging Face manquant")
     
     # Check disk space
@@ -40,6 +40,28 @@ def check_environment():
         pass
     
     return issues
+
+
+def get_hf_token_simple():
+    """Simple HF token getter without dependencies."""
+    # Check environment first
+    token = os.getenv('HF_TOKEN') or os.getenv('HUGGINGFACE_HUB_TOKEN')
+    if token:
+        return token
+    
+    # Check .env file
+    env_file = Path(".env")
+    if env_file.exists():
+        try:
+            with open(env_file, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('HF_TOKEN='):
+                        return line.split('=', 1)[1].strip('\'"')
+        except Exception:
+            pass
+    
+    return None
 
 
 def setup_hf_token():
@@ -56,28 +78,28 @@ def setup_hf_token():
     token = getpass.getpass("🔑 Entrez votre token HF (input masqué, ou Entrée pour ignorer): ").strip()
     
     if token:
-        # Save to .env file with encryption for security
+        # Save to .env file - simple approach, no encryption
         env_file = Path(".env")
-        try:
-            # Try to encrypt the token for better security
-            import sys
-            sys.path.insert(0, '.')
-            from utils.auth_manager import TokenManager
-            from cli_feedback import get_feedback
-            
-            token_manager = TokenManager(get_feedback())
-            encrypted_token = token_manager._encrypt_token(token)
-            
-            with open(env_file, "a") as f:
-                f.write(f"\nHF_TOKEN={encrypted_token}\n")
-            print("✅ Token chiffré et sauvegardé dans .env")
-        except ImportError:
-            # Fallback to plain text if encryption dependencies not available
-            with open(env_file, "a") as f:
-                f.write(f"\nHF_TOKEN={token}\n")
-            print("✅ Token sauvegardé dans .env (avertissement: non chiffré)")
-            print("⚠️  Installez 'cryptography' pour un stockage sécurisé: pip install cryptography")
-        print("⚠️  Redémarrez le terminal pour prendre en compte le token")
+        
+        # Read existing content to avoid duplicates
+        existing_content = ""
+        if env_file.exists():
+            with open(env_file, "r") as f:
+                lines = [line for line in f.readlines() if not line.strip().startswith("HF_TOKEN=")]
+                existing_content = "".join(lines)
+        
+        # Write token to .env
+        with open(env_file, "w") as f:
+            f.write(f"HF_TOKEN={token}\n")
+            if existing_content.strip():
+                f.write(existing_content)
+        
+        print("✅ Token sauvegardé dans .env")
+        
+        # Also set for current session
+        os.environ['HF_TOKEN'] = token
+        print("✅ Token configuré pour cette session ET les prochaines")
+        print("✅ Plus besoin de reconfigurer - tout est prêt !")
         return True
     else:
         print("❌ Token non configuré - certaines fonctions seront limitées")
@@ -234,15 +256,15 @@ def show_configuration():
     print("=" * 20)
     
     # Check current config
+    token = get_hf_token_simple()
     env_file = Path(".env")
+    
     if env_file.exists():
         print("✅ Fichier .env trouvé")
-        with open(env_file) as f:
-            content = f.read()
-            if "HF_TOKEN" in content:
-                print("✅ Token HF configuré")
-            else:
-                print("❌ Token HF manquant")
+        if token:
+            print("✅ Token HF configuré")
+        else:
+            print("❌ Token HF manquant")
     else:
         print("❌ Fichier .env non trouvé")
     
@@ -259,7 +281,9 @@ def show_configuration():
         print("\nConfiguration actuelle:")
         print(f"  Python: {sys.version}")
         print(f"  Répertoire: {Path.cwd()}")
-        print(f"  HF_TOKEN: {'✅' if os.getenv('HF_TOKEN') else '❌'}")
+        print(f"  HF_TOKEN: {'✅ (configuré)' if token else '❌ (manquant)'}")
+        if token:
+            print(f"  Token commence par: {token[:10]}...")
 
 
 def run_diagnostic():
@@ -321,6 +345,12 @@ def main():
     """Main interactive loop."""
     show_banner()
     
+    # Check if we're in interactive mode
+    if not sys.stdin.isatty():
+        print("❌ Ce script nécessite un terminal interactif")
+        print("Utilisez: python main.py --help pour l'utilisation en ligne de commande")
+        sys.exit(1)
+    
     # Quick environment check
     issues = check_environment()
     if issues:
@@ -329,35 +359,42 @@ def main():
             print(f"  • {issue}")
         
         if "Token Hugging Face" in str(issues):
-            if input("\nConfigurer le token maintenant ? (Y/n): ").lower() != 'n':
-                if setup_hf_token():
-                    print("✅ Configuration terminée !")
+            try:
+                if input("\nConfigurer le token maintenant ? (Y/n): ").lower() != 'n':
+                    if setup_hf_token():
+                        print("✅ Configuration terminée !")
+            except (EOFError, KeyboardInterrupt):
+                print("\n❌ Configuration interrompue")
     else:
         print("\n✅ Environnement OK - Prêt à commencer !")
     
     # Main loop
     while True:
-        choice = show_menu()
-        
-        if choice == "0":
-            print("👋 Au revoir !")
+        try:
+            choice = show_menu()
+            
+            if choice == "0":
+                print("👋 Au revoir !")
+                break
+            elif choice == "1":
+                process_youtube()
+            elif choice == "2":
+                process_local_file()
+            elif choice == "3":
+                process_batch()
+            elif choice == "4":
+                show_configuration()
+            elif choice == "5":
+                run_diagnostic()
+            elif choice == "6":
+                show_help()
+            else:
+                print("❌ Choix invalide")
+            
+            input("\nAppuyez sur Entrée pour continuer...")
+        except (EOFError, KeyboardInterrupt):
+            print("\n👋 Interruption détectée - Au revoir !")
             break
-        elif choice == "1":
-            process_youtube()
-        elif choice == "2":
-            process_local_file()
-        elif choice == "3":
-            process_batch()
-        elif choice == "4":
-            show_configuration()
-        elif choice == "5":
-            run_diagnostic()
-        elif choice == "6":
-            show_help()
-        else:
-            print("❌ Choix invalide")
-        
-        input("\nAppuyez sur Entrée pour continuer...")
 
 
 if __name__ == "__main__":

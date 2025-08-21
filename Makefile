@@ -322,12 +322,16 @@ info: ## Informations environnement
 
 .PHONY: start
 start: ## 🚀 Démarrage guidé interactif (RECOMMANDÉ)
-	@echo "$(BLUE)🚀 EMANET VOXTRAL - Démarrage Guidé$(NC)"
-	@echo "$(YELLOW)Lancement de l'interface utilisateur interactive...$(NC)"
-	@$(PYTHON) quick_start.py
+	@echo "$(BLUE)🚀 EMANET VOXTRAL - Configuration Simple$(NC)"
+	@$(PYTHON) quick_start_ultra.py
 
 .PHONY: run
 run: start ## Alias pour 'start' - Démarrage guidé
+
+.PHONY: setup-token
+setup-token: ## 🔑 Configuration interactive du token HuggingFace
+	@echo "$(BLUE)🔑 Configuration Token HuggingFace$(NC)"
+	@$(PYTHON) start_simple.py
 
 .PHONY: wizard
 wizard: ## 🧙‍♂️ Assistant configuration avancé

@@ -64,7 +64,13 @@ for module_name in CRITICAL_MODULES:
 # Local imports - now safe to import
 from cli_feedback import CLIFeedback, get_feedback
 from config import detect_hardware, get_optimal_config, setup_runpod_environment
-from utils.auth_manager import TokenManager, cli_auth_setup
+# Try to import auth_manager, fallback to simple version if issues
+try:
+    from utils.auth_manager import TokenManager, cli_auth_setup
+except Exception:
+    # Fallback to simple token management if auth_manager has issues
+    from simple_token_manager import SimpleTokenManager as TokenManager
+    cli_auth_setup = None
 from utils.error_messages import ErrorReporter
 from utils.gpu_utils import available_device, check_cuda_available, free_cuda_mem, gpu_mem_info
 from utils.memory_manager import get_memory_manager

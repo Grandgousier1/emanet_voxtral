@@ -75,6 +75,13 @@ install-ultra-light: ## Installation ultra-légère (pour espace disque limité)
 	@echo "$(YELLOW)ℹ️  PyTorch et Transformers non installés (économie d'espace)$(NC)"
 	@echo "$(YELLOW)ℹ️  Utilisez 'make install-ml' quand plus d'espace disponible$(NC)"
 
+.PHONY: install-runpod
+install-runpod: ## Installation spécifique RunPod (PyTorch déjà présent)
+	@echo "$(BLUE)🚀 Installation pour RunPod B200...$(NC)"
+	@echo "$(YELLOW)PyTorch déjà présent, installation des dépendances manquantes...$(NC)"
+	$(PIP) install transformers>=4.36.0 rich>=13.0.0 soundfile>=0.12.0 librosa>=0.10.0 click>=8.0.0
+	@echo "$(GREEN)✅ Dépendances RunPod installées$(NC)"
+
 .PHONY: install-ml
 install-ml: ## Ajouter PyTorch et Transformers (après avoir libéré espace)
 	@echo "$(BLUE)🤖 Installation packages ML...$(NC)"
@@ -95,9 +102,9 @@ install-hooks: ## Installation pre-commit hooks
 .PHONY: validate-setup
 validate-setup: ## Validation configuration environnement
 	@echo "$(BLUE)✅ Validation configuration...$(NC)"
-	@$(PYTHON) -c "import torch; print(f'PyTorch: {torch.__version__}')"
-	@$(PYTHON) -c "import torch; print(f'CUDA disponible: {torch.cuda.is_available()}')"
-	@$(PYTHON) -c "import transformers; print(f'Transformers: {transformers.__version__}')"
+	@$(PYTHON) -c "import torch; print('PyTorch:', torch.__version__)"
+	@$(PYTHON) -c "import torch; print('CUDA disponible:', torch.cuda.is_available())"
+	@$(PYTHON) -c "import transformers; print('Transformers:', transformers.__version__)"
 	@if command -v nvidia-smi > /dev/null; then \
 		echo "$(GREEN)GPU détecté:$(NC)"; \
 		nvidia-smi --query-gpu=name,memory.total --format=csv,noheader; \
@@ -356,29 +363,12 @@ info: ## Informations environnement
 # =============================================================================
 
 .PHONY: start
-start: ## 🚀 Démarrage TOUT-EN-UN (installe tout + lance interface)
-	@echo "$(BLUE)🚀 EMANET VOXTRAL - Démarrage TOUT-EN-UN$(NC)"
-	@echo "$(YELLOW)Installation automatique + interface interactive$(NC)"
+start: ## 🚀 Démarrage simplifié (installation + interface)
+	@echo "$(BLUE)🚀 EMANET VOXTRAL - RunPod B200$(NC)"
+	@echo "$(YELLOW)Installation dépendances manquantes...$(NC)"
+	@$(MAKE) install-runpod
 	@echo ""
-	@echo "$(BLUE)Étape 1/5: Diagnostic complet...$(NC)"
-	@if $(PYTHON) diagnose_all.py > /dev/null 2>&1; then \
-		echo "$(GREEN)✅ Diagnostic OK - prêt à continuer$(NC)"; \
-	else \
-		echo "$(YELLOW)⚠️  Problèmes détectés - lancement diagnostic détaillé:$(NC)"; \
-		$(PYTHON) diagnose_all.py; \
-		echo "$(YELLOW)Tentative de correction automatique...$(NC)"; \
-	fi
-	@echo ""
-	@echo "$(BLUE)Étape 2/5: Installation dépendances (peut prendre du temps)...$(NC)"
-	@$(MAKE) install-smart || (echo "$(YELLOW)⚠️  Installation classique échouée, essai installation minimale...$(NC)" && $(MAKE) install-minimal)
-	@echo ""
-	@echo "$(BLUE)Étape 3/5: Validation installation...$(NC)"
-	@$(PYTHON) -c "try:\n  import rich, torch, transformers, soundfile\n  print('✅ Dépendances critiques OK')\nexcept Exception as e:\n  print('⚠️  Dépendance manquante:', e)\n  print('💡 Installation en cours...')"
-	@echo ""
-	@echo "$(BLUE)Étape 4/5: Diagnostic final...$(NC)"
-	@$(PYTHON) diagnose_all.py || echo "$(YELLOW)⚠️  Quelques dépendances peuvent encore manquer$(NC)"
-	@echo ""
-	@echo "$(BLUE)Étape 5/5: Lancement interface...$(NC)"
+	@echo "$(BLUE)✅ Lancement interface...$(NC)"
 	@$(PYTHON) quick_start.py
 
 .PHONY: run

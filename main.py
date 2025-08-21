@@ -119,7 +119,7 @@ try:
     from utils.telemetry import get_telemetry_manager, init_telemetry, shutdown_telemetry, telemetry_decorator
 except ImportError as e:
     # These are truly optional - provide minimal fallbacks
-    def setup_logging(log_level: str = 'INFO') -> None: pass
+    def setup_logging(log_level: str = 'INFO', **kwargs) -> None: pass
     def validate_hf_token() -> bool: return True
     def check_disk_space(path: str, required_gb: int = 1) -> bool: return True
     def init_telemetry(name: str) -> Any: return type('MockTelemetry', (), {'record_counter': lambda *a, **k: None})()

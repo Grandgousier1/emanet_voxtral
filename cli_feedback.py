@@ -209,14 +209,19 @@ class ErrorHandler:
         
         self.feedback.display_error_panel(what, why, how)
 
-# Global feedback instance management
+# Thread-safe global feedback instance management
+import threading
 _global_feedback = None
+_feedback_lock = threading.Lock()
 
 def get_feedback(debug_mode: bool = False) -> CLIFeedback:
-    """Get global feedback instance."""
+    """Get global feedback instance (thread-safe singleton)."""
     global _global_feedback
     if _global_feedback is None:
-        _global_feedback = CLIFeedback(debug_mode=debug_mode)
+        with _feedback_lock:
+            # Double-check locking pattern
+            if _global_feedback is None:
+                _global_feedback = CLIFeedback(debug_mode=debug_mode)
     elif debug_mode:
         _global_feedback.debug_mode = True
     return _global_feedback

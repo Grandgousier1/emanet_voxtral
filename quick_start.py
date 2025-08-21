@@ -47,8 +47,9 @@ def check_environment():
         free_gb = shutil.disk_usage('.').free / (1024**3)
         if free_gb < 25:
             issues.append(f"Espace disque insuffisant: {free_gb:.1f}GB (25GB requis)")
-    except:
-        pass
+    except Exception as e:
+        import logging
+        logging.debug(f'Disk space check failed: {e}')
     
     return issues
 

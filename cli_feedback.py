@@ -112,6 +112,23 @@ class CLIFeedback:
         """Prints a substep message."""
         console.print(f"    [cyan]▸ {message}[/cyan]")
 
+    def status(self, message: str):
+        """Returns a Rich Status context manager for progress indication."""
+        try:
+            from rich.status import Status
+            return Status(message, console=console)
+        except ImportError:
+            # Fallback context manager that just prints the message
+            class FallbackStatus:
+                def __init__(self, msg):
+                    self.message = msg
+                def __enter__(self):
+                    console.print(f"⏳ {self.message}")
+                    return self
+                def __exit__(self, *args):
+                    pass
+            return FallbackStatus(message)
+
     def download_progress(self) -> Progress:
         """Returns a rich Progress instance configured for downloads."""
         return Progress(

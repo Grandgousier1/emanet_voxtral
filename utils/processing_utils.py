@@ -9,6 +9,7 @@ from typing import Optional, List, Dict, Any, Callable
 import asyncio
 import gc
 import hashlib
+import os
 import shutil
 import torch
 import soundfile as sf
@@ -61,7 +62,6 @@ def _validate_url_security(url: str) -> bool:
         domain = parsed.netloc.lower()
         if 'localhost' in domain:
             # Only allow localhost in development/test environments
-            import os
             if os.getenv('ENVIRONMENT', 'production') == 'production':
                 return False
         
@@ -345,11 +345,12 @@ def enhanced_voxtral_process(audio_path: Path, segments: List[Dict], feedback, m
         error_reporter.report("FILE_NOT_FOUND", file_type="Audio", path=audio_path, details=str(e))
         return []
     
-    # Process segments with progress bar
-    for i, segment in enumerate(feedback.progress_bar(segments, "Processing segments")):
-        try:
-            # Use cached audio data if available from segments processing
-            if 'audio_data' in segment:
+    # Process segments with progress bar and interruption handling
+    try:
+        for i, segment in enumerate(feedback.progress_bar(segments, "Processing segments")):
+            try:
+                # Use cached audio data if available from segments processing
+                if 'audio_data' in segment:
                 segment_audio = segment['audio_data']
             else:
                 # Protection contre données corrompues dans segments
@@ -435,6 +436,12 @@ def enhanced_voxtral_process(audio_path: Path, segments: List[Dict], feedback, m
                 'start': segment['start'],
                 'end': segment['end']
             })
+    except KeyboardInterrupt:
+        feedback.warning("Processing interrupted by user")
+        feedback.info(f"Partial results: {len(results)} segments processed")
+        # Cleanup any resources
+        memory_manager.cleanup()
+        return results
     
     feedback.success(f"Processed {len(results)} segments successfully")
     return results

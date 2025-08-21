@@ -240,7 +240,7 @@ def enhanced_vad_segments(
 
             # B200 tensor validation for audio processing
             try:
-                validate_tensor_device(waveform, require_cuda=True, name="audio_waveform")
+                validate_tensor_device(waveform, require_cuda=torch.cuda.is_available(), name="audio_waveform")
                 validate_audio_tensor(waveform, sample_rate=sr, name="loaded_audio")
                 check_tensor_health(waveform, name="audio_waveform", 
                                   check_range=(-1.0, 1.0))  # Audio should be normalized

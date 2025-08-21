@@ -265,7 +265,11 @@ def main() -> int:
     
     # Handle special commands first
     if args.setup_auth:
-        cli_auth_setup()
+        if cli_auth_setup:
+            cli_auth_setup()
+        else:
+            print("❌ Auth setup not available - using simple token manager")
+            print("💡 Use environment variable HF_TOKEN or create .env file")
         return 0
     
     error_reporter = None

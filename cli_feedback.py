@@ -92,6 +92,26 @@ class CLIFeedback:
         if self.debug_mode:
             console.print(f"    [dim]🔍 {message}[/dim]")
 
+    def error(self, message: str, solution: str = "", details: str = ""):
+        """Prints an error message."""
+        console.print(f"  [red]❌ {message}[/red]")
+        if solution:
+            console.print(f"  [yellow]💡 {solution}[/yellow]")
+        if details:
+            console.print(f"  [dim]{details}[/dim]")
+
+    def critical(self, message: str, solution: str = "", details: str = ""):
+        """Prints a critical error message."""
+        console.print(f"  [bold red]🚨 {message}[/bold red]")
+        if solution:
+            console.print(f"  [yellow]💡 {solution}[/yellow]")
+        if details:
+            console.print(f"  [dim]{details}[/dim]")
+
+    def substep(self, message: str):
+        """Prints a substep message."""
+        console.print(f"    [cyan]▸ {message}[/cyan]")
+
     def download_progress(self) -> Progress:
         """Returns a rich Progress instance configured for downloads."""
         return Progress(

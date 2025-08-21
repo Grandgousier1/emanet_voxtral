@@ -391,7 +391,7 @@ class B200Monitor:
                 f"Work: {disk.get('work_dirs_gb', 0):.2f}GB | "
                 f"Updates: {self.total_updates}/{self.total_updates + self.update_errors}")
     
-    def _export_to_telemetry(self, memory_stats: Dict, disk_stats: Dict, process_stats: Dict, gpu_stats: Dict):
+    def _export_to_telemetry(self, memory_stats: Dict, disk_stats: Dict, process_stats: Dict, gpu_stats: Dict) -> None:
         """Export monitoring data to telemetry system."""
         try:
             # System metrics

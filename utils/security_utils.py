@@ -185,3 +185,53 @@ def validate_local_path_security(path_str: str) -> bool:
             
     except Exception as e:
         return False
+
+
+class SecureSubprocess:
+    """Secure subprocess wrapper for safe command execution."""
+    
+    def __init__(self, feedback):
+        self.feedback = feedback
+    
+    def run_secure_command(self, command, timeout=30, **kwargs):
+        """Execute a command securely with validation and timeout."""
+        import subprocess
+        import shlex
+        
+        try:
+            # Basic command validation
+            if not command:
+                self.feedback.error("Empty command not allowed")
+                return None
+            
+            # Convert to list if string
+            if isinstance(command, str):
+                command_list = shlex.split(command)
+            else:
+                command_list = command
+            
+            # Basic security check - no shell injection patterns
+            dangerous_patterns = ['&', '|', ';', '`', '$', '>', '<', '&&', '||']
+            command_str = ' '.join(command_list)
+            if any(pattern in command_str for pattern in dangerous_patterns):
+                self.feedback.error("Potentially dangerous command patterns detected")
+                return None
+            
+            # Execute with timeout
+            result = subprocess.run(
+                command_list,
+                timeout=timeout,
+                capture_output=True,
+                text=True,
+                check=False,
+                **kwargs
+            )
+            
+            return result
+            
+        except subprocess.TimeoutExpired:
+            self.feedback.error(f"Command timed out after {timeout}s")
+            return None
+        except Exception as e:
+            self.feedback.error(f"Command execution failed: {e}")
+            return None

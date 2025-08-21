@@ -154,7 +154,7 @@ class ReproducibleSession:
         self.restore_on_exit = restore_on_exit
         self.original_state = {}
         
-    def __enter__(self):
+    def __enter__(self) -> 'ReproducibleSession':
         """Enter reproducible session."""
         if self.restore_on_exit:
             # Save original state
@@ -170,7 +170,7 @@ class ReproducibleSession:
         logger.info(f"Entered reproducible session with seed {self.seed}")
         return self
         
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit reproducible session."""
         if self.restore_on_exit and self.original_state:
             # Restore original settings

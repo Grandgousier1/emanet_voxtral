@@ -6,7 +6,10 @@ Remplace auth_manager.py quand il y a des problèmes
 
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from cli_feedback import CLIFeedback
 
 
 def get_hf_token() -> Optional[str]:
@@ -85,7 +88,7 @@ def save_hf_token(token: str) -> bool:
 class SimpleTokenManager:
     """Version simple du TokenManager sans dépendances compliquées."""
     
-    def __init__(self, feedback=None):
+    def __init__(self, feedback: Optional['CLIFeedback'] = None):
         self.feedback = feedback
     
     def get_hf_token(self) -> Optional[str]:

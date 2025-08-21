@@ -34,11 +34,11 @@ class ModelManager:
         self._state_lock = threading.RLock()
         self._current_state = ModelState()
     
-    def __enter__(self):
+    def __enter__(self) -> 'ModelManager':
         """Context manager entry - returns self for model operations."""
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         """Context manager exit - guarantees model cleanup."""
         self._cleanup_all_models()
         return False  # Don't suppress exceptions

@@ -155,11 +155,40 @@ class ErrorHandler:
         
         self.feedback.display_error_panel(what, why, how)
     
-    def handle_import_error(self, module_name: str, error: ImportError):
+    def handle_import_error(self, module_name: str, error: ImportError, optional: bool = False):
         """Handle import errors specifically."""
-        what = f"Impossible d'importer le module: {module_name}"
-        why = f"Module manquant ou incorrectement installé: {error}"
-        how = f"Installez le module avec: pip install {module_name}"
+        if optional:
+            what = f"Module optionnel non disponible: {module_name}"
+            why = f"Fonctionnalité avancée désactivée: {error}"
+            how = f"Pour activer: pip install {module_name}"
+            self.feedback.warning(f"{what} - {how}")
+        else:
+            what = f"Module requis manquant: {module_name}"
+            why = f"Module critique non installé: {error}"
+            how = f"Installez le module avec: pip install {module_name}"
+            self.feedback.display_error_panel(what, why, how)
+    
+    def handle_gpu_error(self, error: Exception, context: str = ""):
+        """Handle GPU-related errors specifically."""
+        what = f"Erreur GPU: {context}" if context else "Erreur GPU"
+        why = f"Problème matériel ou driver: {error}"
+        how = "Vérifiez les drivers NVIDIA et la mémoire GPU disponible"
+        
+        self.feedback.display_error_panel(what, why, how)
+    
+    def handle_network_error(self, error: Exception, url: str = ""):
+        """Handle network-related errors specifically."""
+        what = f"Erreur réseau lors de l'accès à: {url}" if url else "Erreur réseau"
+        why = f"Problème de connexion: {error}"
+        how = "Vérifiez votre connexion internet et réessayez"
+        
+        self.feedback.display_error_panel(what, why, how)
+    
+    def handle_file_error(self, file_path, error: Exception, operation: str = ""):
+        """Handle file-related errors specifically."""
+        what = f"Erreur fichier lors de {operation}: {file_path}" if operation else f"Erreur fichier: {file_path}"
+        why = f"Problème d'accès au fichier: {error}"
+        how = "Vérifiez les permissions et l'existence du fichier"
         
         self.feedback.display_error_panel(what, why, how)
 

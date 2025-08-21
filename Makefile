@@ -322,8 +322,9 @@ info: ## Informations environnement
 
 .PHONY: start
 start: ## 🚀 Démarrage guidé interactif (RECOMMANDÉ)
-	@echo "$(BLUE)🚀 EMANET VOXTRAL - Configuration Simple$(NC)"
-	@$(PYTHON) quick_start_ultra.py
+	@echo "$(BLUE)🚀 EMANET VOXTRAL - Démarrage Guidé$(NC)"
+	@echo "$(YELLOW)Lancement de l'interface utilisateur interactive...$(NC)"
+	@$(PYTHON) quick_start.py
 
 .PHONY: run
 run: start ## Alias pour 'start' - Démarrage guidé

@@ -363,12 +363,23 @@ def main():
                 if input("\nConfigurer le token maintenant ? (Y/n): ").lower() != 'n':
                     if setup_hf_token():
                         print("✅ Configuration terminée !")
+                        print("✅ Interface complète maintenant disponible !")
             except (EOFError, KeyboardInterrupt):
                 print("\n❌ Configuration interrompue")
     else:
         print("\n✅ Environnement OK - Prêt à commencer !")
     
-    # Main loop
+    # Check if dependencies are available (info only)
+    try:
+        import importlib
+        importlib.import_module('rich')
+        print("✅ Toutes les dépendances disponibles - Interface complète !")
+    except ImportError:
+        print("⚠️  Certaines dépendances manquantes (ex: rich)")
+        print("💡 Pour l'expérience optimale: make install-dev")
+        print("🚀 Mais l'interface fonctionne quand même !")
+    
+    # Main loop - interface disponible dans tous les cas
     while True:
         try:
             choice = show_menu()

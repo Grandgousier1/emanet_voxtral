@@ -21,7 +21,19 @@ logger = logging.getLogger(__name__)
 
 # Third-party imports - critical
 import torch
-from rich.console import Console
+
+# Rich console - with fallback
+try:
+    from rich.console import Console
+    RICH_AVAILABLE = True
+except ImportError:
+    RICH_AVAILABLE = False
+    # Fallback Console class
+    class Console:
+        def print(self, *args, **kwargs):
+            print(*args)
+        def input(self, *args, **kwargs):
+            return input(*args)
 
 # Third-party imports - with fallbacks
 try:

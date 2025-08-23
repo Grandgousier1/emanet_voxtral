@@ -355,12 +355,12 @@ def enhanced_voxtral_process(audio_path: Path, segments: List[Dict], feedback, m
                 else:
                     # Protection contre données corrompues dans segments
                     try:
-                    start_time = float(segment.get('start', 0))
-                    end_time = float(segment.get('end', 0))
-                    
-                    if start_time < 0 or end_time < 0 or end_time < start_time:
-                        feedback.warning(f"Invalid segment timing: {start_time}s-{end_time}s, skipping")
-                        continue
+                        start_time = float(segment.get('start', 0))
+                        end_time = float(segment.get('end', 0))
+                        
+                        if start_time < 0 or end_time < 0 or end_time < start_time:
+                            feedback.warning(f"Invalid segment timing: {start_time}s-{end_time}s, skipping")
+                            continue
                         
                     start_sample = int(start_time * SAMPLE_RATE)
                     end_sample = int(end_time * SAMPLE_RATE)

@@ -9,7 +9,13 @@ from contextlib import contextmanager
 from typing import Callable, Optional, Any, Type, TypeVar
 import logging
 
-import torch
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+    torch = None
+
 from domain_models import ErrorContext, ErrorSeverity
 from cli_feedback import CLIFeedback
 
@@ -32,7 +38,7 @@ def error_boundary(
     """
     try:
         yield
-    except torch.cuda.OutOfMemoryError as e:
+    except (torch.cuda.OutOfMemoryError if torch else Exception) as e:
         feedback.error(f"🔥 GPU OOM during {context.operation}")
         logger.error(f"OOM in {context.component}: {e}")
         
@@ -117,9 +123,10 @@ def with_error_boundary(
 # Handlers spécialisés
 def create_oom_handler(fallback_batch_size: int = 1):
     """Crée un handler OOM avec réduction de batch size."""
-    def handle_oom(error: torch.cuda.OutOfMemoryError, context: ErrorContext):
+    def handle_oom(error, context: ErrorContext):
         logger.warning(f"OOM recovery: reducing batch size to {fallback_batch_size}")
-        torch.cuda.empty_cache()
+        if torch:
+            torch.cuda.empty_cache()
         # Retourner des instructions de recovery
         return {"reduce_batch_size": fallback_batch_size, "retry": True}
     return handle_oom

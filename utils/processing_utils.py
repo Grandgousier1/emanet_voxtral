@@ -351,10 +351,10 @@ def enhanced_voxtral_process(audio_path: Path, segments: List[Dict], feedback, m
             try:
                 # Use cached audio data if available from segments processing
                 if 'audio_data' in segment:
-                segment_audio = segment['audio_data']
-            else:
-                # Protection contre données corrompues dans segments
-                try:
+                    segment_audio = segment['audio_data']
+                else:
+                    # Protection contre données corrompues dans segments
+                    try:
                     start_time = float(segment.get('start', 0))
                     end_time = float(segment.get('end', 0))
                     

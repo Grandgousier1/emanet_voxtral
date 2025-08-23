@@ -3,14 +3,22 @@
 import time
 from typing import List, Any, Optional, Dict
 
-from rich.console import Console
-from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeRemainingColumn, DownloadColumn, TransferSpeedColumn
-from rich.status import Status
-from rich.syntax import Syntax
-from rich.table import Table
-
-console = Console()
+try:
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeRemainingColumn, DownloadColumn, TransferSpeedColumn
+    from rich.status import Status
+    from rich.syntax import Syntax
+    from rich.table import Table
+    console = Console()
+    RICH_AVAILABLE = True
+except ImportError:
+    # Fallback console without rich formatting
+    class Console:
+        def print(self, *args, **kwargs):
+            print(*args)
+    console = Console()
+    RICH_AVAILABLE = False
 
 class CLIFeedback:
     """A centralized class for providing rich, user-friendly CLI feedback."""

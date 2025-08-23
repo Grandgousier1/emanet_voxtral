@@ -22,13 +22,22 @@ try:
 except ImportError:
     TORCH_AVAILABLE = False
 
-from rich.console import Console
-from rich.table import Table
-from rich.columns import Columns
-from rich.live import Live
-from constants import BYTES_TO_GB
+try:
+    from rich.console import Console
+    from rich.table import Table
+    from rich.columns import Columns
+    from rich.live import Live
+    console = Console()
+    RICH_AVAILABLE = True
+except ImportError:
+    # Fallback console without rich formatting
+    class Console:
+        def print(self, *args, **kwargs):
+            print(*args)
+    console = Console()
+    RICH_AVAILABLE = False
 
-console = Console()
+from constants import BYTES_TO_GB
 
 class B200Monitor:
     """Real-time resource monitor for B200 with circuit breaker protection."""

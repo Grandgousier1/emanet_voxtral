@@ -19,8 +19,13 @@ from typing import Any, Dict, List, Optional, Tuple
 # Avoid global basicConfig.
 logger = logging.getLogger(__name__)
 
-# Third-party imports - critical
-import torch
+# Third-party imports - with fallback protection
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+    torch = None
 
 # Rich console - with fallback
 try:

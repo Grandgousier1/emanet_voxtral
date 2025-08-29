@@ -60,7 +60,7 @@ except ImportError:
 
 __all__ = [
     # Audio utilities
-    'download_audio_from_youtube',
+    'enhanced_download_audio',
     'apply_vad_on_audio',
     'get_audio_duration',
     

@@ -66,15 +66,10 @@ def setup_interactive_configuration():
         with open(env_path, 'w', encoding='utf-8') as f:
             if hf_token:
                 # Encrypt token before storing for security
-                try:
-                    from utils.auth_manager import TokenManager
-                    token_manager = TokenManager(feedback)
-                    encrypted_token = token_manager._encrypt_token(hf_token)
-                    f.write(f'HF_TOKEN="{encrypted_token}"\n')
-                except ImportError:
-                    # Fallback to plain text if encryption not available
-                    feedback.warning("Token encryption not available, storing in plain text")
-                    f.write(f'HF_TOKEN="{hf_token}"\n')
+from utils.auth_manager import TokenManager
+token_manager = TokenManager(feedback)
+encrypted_token = token_manager._encrypt_token(hf_token)
+f.write(f'HF_TOKEN="{encrypted_token}"\n')
         feedback.success(f"Fichier .env créé avec succès.")
 
 # Hardware detection

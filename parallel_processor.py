@@ -22,7 +22,23 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Union, Callable, Tuple
 from domain_models import AudioSegment, ProcessingResult, BatchMetrics
 from error_boundary import with_error_boundary, ErrorSeverity
-import torch
+
+try:
+    import torch
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+    # Create mock torch module for type hints
+    class MockTorch:
+        class nn:
+            class Module:
+                pass
+        class cuda:
+            @staticmethod
+            def is_available():
+                return False
+    torch = MockTorch()
+
 import logging
 import numpy as np
 from constants import BYTES_TO_GB

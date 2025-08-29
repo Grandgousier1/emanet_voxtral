@@ -11,8 +11,20 @@ import gc
 import hashlib
 import os
 import shutil
-import torch
-import soundfile as sf
+
+try:
+    import torch
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+    torch = None
+
+try:
+    import soundfile as sf
+    HAS_SOUNDFILE = True
+except ImportError:
+    HAS_SOUNDFILE = False
+    sf = None
 
 try:
     import librosa
@@ -362,45 +374,47 @@ def enhanced_voxtral_process(audio_path: Path, segments: List[Dict], feedback, m
                             feedback.warning(f"Invalid segment timing: {start_time}s-{end_time}s, skipping")
                             continue
                         
-                    start_sample = int(start_time * SAMPLE_RATE)
-                    end_sample = int(end_time * SAMPLE_RATE)
-                    
-                    # Protection contre dépassement array bounds
-                    if start_sample >= len(audio_data) or end_sample > len(audio_data):
-                        feedback.warning(f"Segment beyond audio bounds: {start_sample}-{end_sample} > {len(audio_data)}, skipping")
-                        continue
+                        start_sample = int(start_time * SAMPLE_RATE)
+                        end_sample = int(end_time * SAMPLE_RATE)
                         
-                    segment_audio = audio_data[start_sample:end_sample]
-                    
-                except (ValueError, TypeError, KeyError) as e:
-                    feedback.warning(f"Invalid segment data: {e}, skipping segment {i+1}")
+                        # Protection contre dépassement array bounds
+                        if start_sample >= len(audio_data) or end_sample > len(audio_data):
+                            feedback.warning(f"Segment beyond audio bounds: {start_sample}-{end_sample} > {len(audio_data)}, skipping")
+                            continue
+                            
+                        segment_audio = audio_data[start_sample:end_sample]
+                        
+                    except (ValueError, TypeError, KeyError) as e:
+                        feedback.warning(f"Invalid segment data: {e}, skipping segment {i+1}")
+                        continue
+                
+                if len(segment_audio) == 0:
+                    feedback.debug(f"Skipping empty segment {i+1}")
                     continue
-            
-            if len(segment_audio) == 0:
-                feedback.debug(f"Skipping empty segment {i+1}")
-                continue
-            
-            if processor and hasattr(model, 'generate'):
-                inputs = processor(
-                    segment_audio, 
-                    sampling_rate=SAMPLE_RATE, 
-                    return_tensors="pt"
-                )
                 
-                inputs = {k: v.to(model.device) for k, v in inputs.items()}
-                
-                # Use optimized generation parameters for Turkish drama
-                gen_params = get_transformers_generation_params()
-                
-                with torch.no_grad():
-                    generated_ids = model.generate(
-                        **inputs,
-                        **gen_params,
-                        pad_token_id=processor.tokenizer.eos_token_id,
+                if processor and hasattr(model, 'generate'):
+                    inputs = processor(
+                        segment_audio, 
+                        sampling_rate=SAMPLE_RATE, 
+                        return_tensors="pt"
                     )
-                
-                decoded = processor.batch_decode(generated_ids, skip_special_tokens=True)
-                text = decoded[0] if decoded else ""
+                    
+                    inputs = {k: v.to(model.device) for k, v in inputs.items()}
+                    
+                    # Use optimized generation parameters for Turkish drama
+                    gen_params = get_transformers_generation_params()
+                    
+                    with torch.no_grad():
+                        generated_ids = model.generate(
+                            **inputs,
+                            **gen_params,
+                            pad_token_id=processor.tokenizer.eos_token_id,
+                        )
+                    
+                    decoded = processor.batch_decode(generated_ids, skip_special_tokens=True)
+                    text = decoded[0] if decoded else ""
+                else:
+                    text = ""
                 
                 if text.strip():
                     # Optimize subtitle timing based on text length
@@ -421,21 +435,21 @@ def enhanced_voxtral_process(audio_path: Path, segments: List[Dict], feedback, m
                     # Warn about timing issues
                     if 'warning' in optimized_timing:
                         feedback.warning(f"Segment {i+1}: {optimized_timing['warning']}")
-            
-            # Unified memory management
-            memory_manager.on_segment_processed()
-            
-            # Check for high memory pressure and auto-cleanup if needed
-            if memory_manager.auto_cleanup_if_needed():
-                feedback.warning(f"Auto-cleanup triggered due to high memory pressure")
                 
-        except Exception as e:
-            error_reporter.report("GENERIC_PROCESSING_ERROR", segment_index=i + 1, details=str(e))
-            results.append({
-                'text': '[processing error]',
-                'start': segment['start'],
-                'end': segment['end']
-            })
+                # Unified memory management
+                memory_manager.on_segment_processed()
+                
+                # Check for high memory pressure and auto-cleanup if needed
+                if memory_manager.auto_cleanup_if_needed():
+                    feedback.warning(f"Auto-cleanup triggered due to high memory pressure")
+                
+            except Exception as e:
+                error_reporter.report("GENERIC_PROCESSING_ERROR", segment_index=i + 1, details=str(e))
+                results.append({
+                    'text': '[processing error]',
+                    'start': segment['start'],
+                    'end': segment['end']
+                })
     except KeyboardInterrupt:
         feedback.warning("Processing interrupted by user")
         feedback.info(f"Partial results: {len(results)} segments processed")

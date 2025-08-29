@@ -16,6 +16,19 @@ Ce système a été **complètement refactorisé et optimisé** suite à un audi
 
 ---
 
+## 📋 Prérequis Système
+
+Avant de lancer l'application, assurez-vous d'avoir les dépendances système suivantes installées :
+
+- **Python**: Version 3.9+
+- **Git**: Pour cloner le dépôt.
+- **ffmpeg**: Une dépendance critique pour tout traitement audio et vidéo.
+
+Sur les systèmes basés sur Debian (comme Ubuntu ou l'environnement Runpod), vous pouvez installer `ffmpeg` avec :
+`sudo apt-get update && sudo apt-get install ffmpeg`
+
+---
+
 ## ⚡ Quick Start (One Command)
 
 ```bash

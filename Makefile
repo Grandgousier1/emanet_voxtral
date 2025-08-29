@@ -26,82 +26,47 @@ help: ## Affiche cette aide
 # =============================================================================
 
 .PHONY: setup
-setup: ## Configuration environnement développement complet
-	@echo "$(BLUE)🔧 Configuration environnement développement...$(NC)"
+setup: ## 🔥 Configuration de l'environnement de développement complet
+	@echo "$(BLUE)🔧 Installation des dépendances de développement...$(NC)"
 	$(MAKE) install-dev
+	@echo "$(BLUE)🪝 Installation des pre-commit hooks...$(NC)"
 	$(MAKE) install-hooks
+	@echo "$(BLUE)✅ Validation de la configuration...$(NC)"
 	$(MAKE) validate-setup
 	@echo "$(GREEN)✅ Environnement prêt !$(NC)"
 
 .PHONY: install
-install: ## Installation dépendances production
-	@echo "$(BLUE)📦 Installation dépendances production...$(NC)"
+install: ## 📦 Installation des dépendances de production
+	@echo "$(BLUE)📦 Installation des dépendances de production...$(NC)"
 	$(PIP) install -e .
 
 .PHONY: install-dev
-install-dev: ## Installation dépendances développement
-	@echo "$(BLUE)🛠️ Installation dépendances développement...$(NC)"
-	$(PIP) install -e ".[dev,docs,benchmark]"
-
-.PHONY: install-minimal
-install-minimal: ## Installation dépendances minimales (secours)
-	@echo "$(BLUE)⚡ Installation dépendances minimales...$(NC)"
-	$(PIP) install -r requirements-minimal.txt
-	$(PIP) install -e .
-
-.PHONY: install-smart
-install-smart: ## Installation intelligente avec fallbacks
-	@echo "$(BLUE)🧠 Installation intelligente...$(NC)"
-	@echo "$(YELLOW)Vérification espace disque...$(NC)"
-	@$(PYTHON) -c "import shutil; free=shutil.disk_usage('.').free/(1024**3); print(f'Espace libre: {free:.1f}GB'); exit(1 if free < 5 else 0)" || (echo "$(RED)❌ Espace disque insuffisant (< 5GB)$(NC)" && $(MAKE) install-ultra-light && exit 0)
-	@echo "$(YELLOW)Tentative 1: Installation complète...$(NC)"
-	@if $(PIP) install -e ".[dev,docs,benchmark]" > /dev/null 2>&1; then \
-		echo "$(GREEN)✅ Installation complète réussie$(NC)"; \
-	else \
-		echo "$(YELLOW)⚠️  Installation complète échouée, tentative requirements.txt...$(NC)"; \
-		if $(PIP) install -r requirements.txt > /dev/null 2>&1; then \
-			echo "$(GREEN)✅ Installation requirements.txt réussie$(NC)"; \
-		else \
-			echo "$(YELLOW)⚠️  Requirements.txt échoué, installation ultra-légère...$(NC)"; \
-			$(MAKE) install-ultra-light; \
-		fi \
-	fi
-
-.PHONY: install-ultra-light
-install-ultra-light: ## Installation ultra-légère (pour espace disque limité)
-	@echo "$(BLUE)💡 Installation ultra-légère...$(NC)"
-	$(PIP) install -r requirements-ultra-light.txt
-	@echo "$(GREEN)✅ Installation ultra-légère terminée$(NC)"
-	@echo "$(YELLOW)ℹ️  PyTorch et Transformers non installés (économie d'espace)$(NC)"
-	@echo "$(YELLOW)ℹ️  Utilisez 'make install-ml' quand plus d'espace disponible$(NC)"
-
-.PHONY: install-runpod
-install-runpod: ## Installation spécifique RunPod (PyTorch déjà présent)
-	@echo "$(BLUE)🚀 Installation pour RunPod B200...$(NC)"
-	@echo "$(YELLOW)PyTorch déjà présent, installation des dépendances manquantes...$(NC)"
-	$(PIP) install transformers>=4.36.0 rich>=13.0.0 soundfile>=0.12.0 librosa>=0.10.0 click>=8.0.0
-	@echo "$(GREEN)✅ Dépendances RunPod installées$(NC)"
-
-.PHONY: install-ml
-install-ml: ## Ajouter PyTorch et Transformers (après avoir libéré espace)
-	@echo "$(BLUE)🤖 Installation packages ML...$(NC)"
-	$(PIP) install torch>=2.0.0 transformers>=4.36.0 librosa>=0.10.0
-	@echo "$(GREEN)✅ Packages ML installés$(NC)"
+install-dev: ## 🛠️ Installation des dépendances de développement (dev, docs, benchmark)
+	@echo "$(BLUE)🛠️ Installation des dépendances de développement...$(NC)"
+	$(PIP) install -e ".[dev,docs,benchmark,nlp]"
 
 .PHONY: install-vllm
-install-vllm: ## Installation vLLM pour B200
-	@echo "$(BLUE)🚀 Installation vLLM pour optimisations B200...$(NC)"
+install-vllm: ## 🚀 Installation de vLLM pour les optimisations B200
+	@echo "$(BLUE)🚀 Installation de vLLM...$(NC)"
 	$(PIP) install -e ".[vllm]"
 
 .PHONY: install-hooks
-install-hooks: ## Installation pre-commit hooks
-	@echo "$(BLUE)🪝 Installation pre-commit hooks...$(NC)"
+install-hooks: ## 🪝 Installation des pre-commit hooks
 	pre-commit install
 	pre-commit install --hook-type commit-msg
 
 .PHONY: validate-setup
-validate-setup: ## Validation configuration environnement
-	@echo "$(BLUE)✅ Validation configuration...$(NC)"
+validate-setup: ## ✅ Validation de la configuration de l'environnement
+	@echo "$(BLUE)✅ Validation de la configuration...$(NC)"
+	@echo "$(YELLOW)Vérification des dépendances système...$(NC)"
+	@if ! command -v ffmpeg > /dev/null; then \
+		echo "$(RED)❌ Dépendance système manquante: ffmpeg n'est pas installé.$(NC)"; \
+		echo "$(YELLOW)   Veuillez l'installer avec 'sudo apt-get install ffmpeg' ou 'conda install ffmpeg'.$(NC)"; \
+		exit 1; \
+	else \
+		echo "$(GREEN)✅ ffmpeg est installé.$(NC)"; \
+	fi
+	@echo "$(YELLOW)Vérification des dépendances Python...$(NC)"
 	@$(PYTHON) -c "import torch; print('PyTorch:', torch.__version__)"
 	@$(PYTHON) -c "import torch; print('CUDA disponible:', torch.cuda.is_available())"
 	@$(PYTHON) -c "import transformers; print('Transformers:', transformers.__version__)"
@@ -111,6 +76,7 @@ validate-setup: ## Validation configuration environnement
 	else \
 		echo "$(YELLOW)⚠️ Aucun GPU NVIDIA détecté$(NC)"; \
 	fi
+
 
 # =============================================================================
 # QUALITÉ CODE
@@ -363,13 +329,9 @@ info: ## Informations environnement
 # =============================================================================
 
 .PHONY: start
-start: ## 🚀 Démarrage simplifié (installation + interface)
-	@echo "$(BLUE)🚀 EMANET VOXTRAL - RunPod B200$(NC)"
-	@echo "$(YELLOW)Installation dépendances manquantes...$(NC)"
-	@$(MAKE) install-runpod
-	@echo ""
-	@echo "$(BLUE)✅ Lancement interface...$(NC)"
-	@$(PYTHON) quick_start.py
+start: ## 🚀 Démarrage simplifié via l'assistant interactif (recommandé)
+	@echo "$(BLUE)🚀 Lancement de l'assistant de configuration EMANET VOXTRAL...$(NC)"
+	@$(MAKE) wizard
 
 .PHONY: run
 run: start ## Alias pour 'start' - Démarrage guidé

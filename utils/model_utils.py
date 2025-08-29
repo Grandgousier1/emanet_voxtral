@@ -4,7 +4,42 @@ utils/model_utils.py - Model management utilities
 Enhanced with B200 optimizations and torch.compile
 """
 
-import torch
+try:
+    import torch
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+    # Create mock torch module for type hints
+    class MockTorch:
+        class nn:
+            class Module:
+                pass
+        class dtype:
+            pass
+        class Tensor:
+            pass
+        class cuda:
+            @staticmethod
+            def is_available():
+                return False
+            @staticmethod
+            def empty_cache():
+                pass
+            @staticmethod
+            def synchronize():
+                pass
+        @staticmethod
+        def device(x):
+            return x
+        class jit:
+            @staticmethod
+            def script(x):
+                return x
+        @staticmethod
+        def compile(model, **kwargs):
+            return model
+    torch = MockTorch()
+    
 import gc
 import threading
 from typing import Optional, Tuple, Any, Dict, Union

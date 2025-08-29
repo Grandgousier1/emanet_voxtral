@@ -20,8 +20,8 @@ build-backend = "setuptools.build_meta"
 py-modules = ["main", "quick_start", "validator", "benchmark", "monitor"]
 
 [tool.setuptools.packages.find]
-include = ["utils*", "tests*"]
-exclude = ["config*", "metrics*", "services*"]
+include = ["utils*", "services*", "config*"]
+exclude = ["tests*"]
 
 [project]
 name = "voxtral-b200"
@@ -39,7 +39,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10", 
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -47,26 +47,59 @@ classifiers = [
 ]
 
 dependencies = [
-    "torch>=2.0.0",
-    "torchaudio>=2.0.0",
-    "transformers>=4.30.0",
-    "numpy>=1.21.0",
-    "soundfile>=0.12.0",
-    "librosa>=0.10.0",
-    "rich>=13.0.0",
-    "click>=8.0.0",
-    "pydantic>=2.0.0",
+    # Core ML - torch/torchaudio are pre-installed on RunPod
+    "transformers==4.54.0",
+    "mistral-common==1.8.1",
+    "numpy>=1.24.0",
+    "packaging>=23.0",
+    "pyyaml>=6.0",
     "psutil>=5.9.0",
+    "pydantic>=2.0.0",
+
+    # Audio
+    "soundfile==0.12.1",
+    "librosa==0.10.2",
+    "silero-vad==4.0.0",
+    "resampy==0.4.2",
+    "audioread==3.0.1",
+    "faster-whisper==0.12.0", # Fallback ASR
+
+    # Video/Audio Download
+    "yt-dlp==2025.6.30",
+    "ffmpeg-python==0.2.0",
+
+    # UI & CLI
+    "rich==13.7.1",
+    "click>=8.0.0",
+    "tqdm==4.67.1",
+
+    # Security & Auth
+    "cryptography==42.0.0", # Made mandatory
+    "keyring==24.2.0",
+    "python-dotenv==1.1.1",
+
+    # Utilities
+    "requests==2.32.4",
+    "fake-useragent==1.4.0",
+    "sqlalchemy==2.0.31",
+    "pynvml==11.5.0",
+    "nvidia-ml-py3==11.5.0",
+    "sentencepiece==0.2.0",
 ]
 
 [project.optional-dependencies]
 # Dépendances optionnelles pour fonctionnalités avancées
-vllm = ["vllm>=0.2.0"]
+vllm = ["vllm>=0.6.0,<0.8.0"]
+nlp = [
+    "nltk==3.8.1",
+    "sacrebleu==2.4.2",
+    "sacremoses==0.1.1",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "pytest-asyncio>=0.21.0",
-    "pytest-sugar>=0.9.7", # Ajout de pytest-sugar pour une meilleure UX
+    "pytest-sugar>=0.9.7",
     "black>=23.0.0",
     "isort>=5.12.0",
     "flake8>=6.0.0",

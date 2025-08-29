@@ -59,7 +59,7 @@ dependencies = [
     # Audio
     "soundfile==0.12.1",
     "librosa==0.10.2",
-    "silero-vad==4.0.0",
+    "silero-vad>=5.0.0",
     "resampy==0.4.2",
     "audioread==3.0.1",
     "faster-whisper==0.12.0", # Fallback ASR

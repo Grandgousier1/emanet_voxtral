@@ -77,6 +77,12 @@ validate-setup: ## ✅ Validation de la configuration de l'environnement
 		echo "$(YELLOW)⚠️ Aucun GPU NVIDIA détecté$(NC)"; \
 	fi
 
+.PHONY: check-deps
+check-deps: ## ⛑️ Vérifie la cohérence des dépendances installées
+	@echo "$(BLUE)🔎 Vérification des conflits de dépendances...$(NC)"
+	$(PIP) check
+
+
 
 # =============================================================================
 # QUALITÉ CODE

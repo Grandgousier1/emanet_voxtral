@@ -331,13 +331,18 @@ info: ## Informations environnement
 	fi
 
 # =============================================================================
-# UTILISATION INTERACTIVE
+# UTILISATION
 # =============================================================================
 
 .PHONY: start
-start: ## 🚀 Démarrage simplifié via l'assistant interactif (recommandé)
-	@echo "$(BLUE)🚀 Lancement de l'assistant de configuration EMANET VOXTRAL...$(NC)"
-	@$(MAKE) wizard
+start: ## 🚀 Démarrage guidé. Utilisation: make start URL="..." OUTPUT="..."
+	@if [ -z "$(URL)" ] || [ -z "$(OUTPUT)" ]; then \
+		echo "$(RED)❌ Erreur: URL et OUTPUT sont requis pour le démarrage guidé."(NC)"; \
+		echo "$(YELLOW)👉 Utilisation: make start URL=\"votre_url\" OUTPUT=\"votre_fichier.srt\"$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(BLUE)🚀 Lancement du traitement guidé...$(NC)"
+	$(MAKE) process URL="$(URL)" OUTPUT="$(OUTPUT)"
 
 .PHONY: run
 run: start ## Alias pour 'start' - Démarrage guidé
@@ -352,31 +357,6 @@ diagnose: ## 🔍 Diagnostic complet du projet
 	@echo "$(BLUE)🔍 Diagnostic Complet$(NC)"
 	@$(PYTHON) diagnose_all.py
 
-.PHONY: wizard
-wizard: ## 🧙‍♂️ Assistant configuration avancé
-	@echo "$(BLUE)🧙‍♂️ Assistant Configuration Avancé$(NC)"
-	@$(PYTHON) main_enhanced.py --wizard
-
-.PHONY: setup-interactive
-setup-interactive: ## ⚙️ Configuration système interactive
-	@echo "$(BLUE)⚙️ Configuration Système Interactive$(NC)"
-	@$(PYTHON) main_enhanced.py --setup
-
-.PHONY: validate-interactive
-validate-interactive: ## 🏥 Diagnostic système interactif
-	@echo "$(BLUE)🏥 Diagnostic Système Interactif$(NC)"
-	@$(PYTHON) main_enhanced.py --validate
-
-.PHONY: tutorial
-tutorial: ## 📚 Guide d'utilisation interactif
-	@echo "$(BLUE)📚 Guide d'Utilisation Interactif$(NC)"
-	@$(PYTHON) main_enhanced.py --tutorial
-
-.PHONY: demo
-demo: ## 🎬 Démonstration avec fichier exemple
-	@echo "$(BLUE)🎬 Démonstration EMANET VOXTRAL$(NC)"
-	@echo "$(YELLOW)Mode simulation - aucun traitement réel$(NC)"
-	@$(PYTHON) main_enhanced.py --url "https://youtube.com/watch?v=dQw4w9WgXcQ" --output demo.srt --dry-run
 
 # =============================================================================
 # COMMANDES UTILISATEUR FINALES

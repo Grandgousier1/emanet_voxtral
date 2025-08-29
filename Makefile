@@ -336,7 +336,7 @@ info: ## Informations environnement
 
 .PHONY: start
 start: ## 🚀 Démarrage guidé. Utilisation: make start URL="..." OUTPUT="..."
-	@if [ -z "$(URL)" ] || [ -z "$(OUTPUT)" ]; then \
+	@if [ -z "$(URL)" -o -z "$(OUTPUT)" ]; then \
 		echo "$(RED)❌ Erreur: URL et OUTPUT sont requis pour le démarrage guidé."(NC)"; \
 		echo "$(YELLOW)👉 Utilisation: make start URL=\"votre_url\" OUTPUT=\"votre_fichier.srt\"$(NC)"; \
 		exit 1; \

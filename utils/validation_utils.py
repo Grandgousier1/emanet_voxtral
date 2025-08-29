@@ -216,7 +216,7 @@ class RateLimiter:
 def enhanced_preflight_checks(feedback: CLIFeedback) -> bool:
     """Enhanced preflight checks with comprehensive validation."""
     
-    feedback.step("Pre-execution Validation", 1, 6)
+    feedback.major_step("Pre-execution Validation", 1, 6)
     
     # Run full validation suite
     feedback.substep("Running comprehensive validation suite")

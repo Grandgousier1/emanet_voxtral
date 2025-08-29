@@ -81,7 +81,7 @@ class CLIFeedback:
 
     def major_step(self, step_num: int, total_steps: int, description: str):
         """Prints a major step title."""
-        console.print(f"\n[cyan bold][Étape {step_num}/{total_steps}] {description}...[/cyan]")
+        console.print(f"\n[bold][cyan][Étape {step_num}/{total_steps}] {description}...[/cyan][/bold]")
 
     def info(self, message: str):
         """Prints an informational message."""
